@@ -50,7 +50,7 @@ def upsample(hparams, filters, kernel_size):
 
 
 def generator(hparams, name='generator'):
-  inputs = tf.keras.Input(shape=hparams.signal_shape, name='inputs')
+  inputs = tf.keras.Input(shape=hparams.image_shape, name='inputs')
   outputs = inputs
 
   down_stack = [
@@ -103,7 +103,7 @@ def generator(hparams, name='generator'):
 
 
 def discriminator(hparams, name='discriminator'):
-  inputs = tf.keras.Input(hparams.signal_shape, name='signals')
+  inputs = tf.keras.Input(hparams.image_shape, name='signals')
 
   initializer = tf.random_normal_initializer(0., 0.02)
 
