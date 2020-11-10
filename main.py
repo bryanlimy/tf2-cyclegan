@@ -123,7 +123,8 @@ def main(hparams):
           f'MSE(Y, G(Y)): {metrics["MSE(Y, G(Y))"]:.04f}\n'
           f'Elapse: {(end - start) / 60:.02f} mins\n')
 
-    plot_transformation(plot_images[0], plot_images[1], gan, summary, epoch)
+    if epoch % 10 == 0 or epoch == hparams.epochs - 1:
+      plot_transformation(plot_images[0], plot_images[1], gan, summary, epoch)
 
 
 if __name__ == '__main__':
@@ -134,7 +135,7 @@ if __name__ == '__main__':
   parser.add_argument('--num_units', default=32, type=int)
   parser.add_argument('--kernel_size', default=24, type=int)
   parser.add_argument('--strides', default=2, type=int)
-  parser.add_argument('--activation', default='relu', type=str)
+  parser.add_argument('--activation', default='lrelu', type=str)
   parser.add_argument('--dropout', default=0.2, type=float)
   parser.add_argument('--layer_norm', action='store_true')
   parser.add_argument('--patch_gan', action='store_true')
