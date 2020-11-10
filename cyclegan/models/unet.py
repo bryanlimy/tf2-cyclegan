@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers
 
-from .utils import Conv1DTranspose, Activation, PhaseShuffle, get_model_name
+from .utils import get_model_name, Activation
 
 
 @register('unet')
@@ -18,7 +18,7 @@ def downsample(hparams, filters, kernel_size):
   initializer = tf.random_normal_initializer(0., 0.02)
   layer = tf.keras.Sequential()
   layer.add(
-      layers.Conv1D(
+      layers.Conv2D(
           filters=filters,
           kernel_size=kernel_size,
           strides=2,
@@ -35,7 +35,7 @@ def upsample(hparams, filters, kernel_size):
   initializer = tf.random_normal_initializer(0., 0.02)
   layer = tf.keras.Sequential()
   layer.add(
-      Conv1DTranspose(
+      layers.Conv2DTranspose(
           filters=filters,
           kernel_size=kernel_size,
           strides=2,
@@ -89,17 +89,15 @@ def generator(hparams, name='generator'):
     outputs = up(outputs)
     outputs = concat([outputs, skip])
 
-  outputs = Conv1DTranspose(
-      filters=hparams.num_neurons,
+  outputs = layers.Conv2DTranspose(
+      filters=3,
       kernel_size=4,
       strides=2,
       padding='same',
       kernel_initializer=tf.random_normal_initializer(0., 0.02),
-      activation=None)(outputs)
+      activation='tanh')(outputs)
 
-  outputs = layers.Dense(hparams.num_neurons)(outputs)
-  outputs = layers.Activation(
-      'sigmoid' if hparams.normalize else 'linear', dtype=tf.float32)(outputs)
+  outputs = layers.Activation('linear', dtype=tf.float32)(outputs)
 
   return tf.keras.Model(inputs=inputs, outputs=outputs, name=name)
 
@@ -110,27 +108,25 @@ def discriminator(hparams, name='discriminator'):
   initializer = tf.random_normal_initializer(0., 0.02)
 
   outputs = downsample(hparams, 64, 4)(inputs)
-  outputs = PhaseShuffle(outputs.shape, m=hparams.m)(outputs)
   outputs = downsample(hparams, 128, 4)(outputs)
-  outputs = PhaseShuffle(outputs.shape, m=hparams.m)(outputs)
   outputs = downsample(hparams, 256, 4)(outputs)
-  outputs = PhaseShuffle(outputs.shape, m=hparams.m)(outputs)
   outputs = downsample(hparams, 512, 4)(outputs)
-  outputs = PhaseShuffle(outputs.shape, m=hparams.m)(outputs)
 
-  outputs = layers.ZeroPadding1D()(outputs)
-  outputs = layers.Conv1D(
+  outputs = layers.ZeroPadding2D()(outputs)
+  outputs = layers.Conv2D(
       filters=512,
       kernel_size=4,
       strides=1,
       use_bias=False,
       kernel_initializer=initializer)(outputs)
 
-  outputs = layers.LayerNormalization()(outputs)
-  outputs = Activation(hparams.activation)(outputs)
-  outputs = layers.ZeroPadding1D()(outputs)
+  if hparams.layer_norm:
+    outputs = layers.LayerNormalization()(outputs)
 
-  outputs = layers.Conv1D(
+  outputs = Activation(hparams.activation)(outputs)
+  outputs = layers.ZeroPadding2D()(outputs)
+
+  outputs = layers.Conv2D(
       filters=1, kernel_size=4, strides=1,
       kernel_initializer=initializer)(outputs)
 
