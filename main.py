@@ -1,10 +1,8 @@
-import os
 import argparse
 import numpy as np
 from tqdm import tqdm
 from time import time
 import tensorflow as tf
-from shutil import rmtree
 from tensorflow.keras.mixed_precision import experimental as mixed_precision
 
 from cyclegan.utils import utils
@@ -12,9 +10,6 @@ from cyclegan.models.registry import get_models
 from cyclegan.utils.summary_helper import Summary
 from cyclegan.alogrithms.registry import get_algorithm
 from cyclegan.utils.dataset_helper import get_datasets
-
-np.random.seed(1234)
-tf.random.set_seed(1234)
 
 
 def set_precision_policy(hparams):
@@ -63,38 +58,7 @@ def validate(hparams, x_ds, y_ds, gan, summary, epoch):
   return metrics
 
 
-def plot_transformation(x, y, gan, summary, epoch):
-  fake_x, fake_y, cycled_x, cycled_y = gan.cycle_step(x, y, training=False)
-
-  # plot the first 3 transformations
-  for i in range(3):
-    summary.plot_transformation(
-        f'X cycle/image_{i + 1:02d}',
-        images=[
-            x[i, ...],
-            fake_y[i, ...],
-            cycled_x[i, ...],
-        ],
-        labels=['X', 'G(X)', 'F(G(X))'],
-        step=epoch,
-        training=False)
-
-    summary.plot_transformation(
-        f'Y cycle/image_{i + 1:02d}',
-        images=[
-            y[i, ...],
-            fake_x[i, ...],
-            cycled_y[i, ...],
-        ],
-        labels=['Y', 'F(Y)', 'G(F(Y))'],
-        step=epoch,
-        training=False)
-
-
 def main(hparams):
-  if hparams.clear_output_dir and os.path.exists(hparams.output_dir):
-    rmtree(hparams.output_dir)
-
   tf.keras.backend.clear_session()
 
   set_precision_policy(hparams)
@@ -124,7 +88,10 @@ def main(hparams):
           f'Elapse: {(end - start) / 60:.02f} mins\n')
 
     if epoch % 10 == 0 or epoch == hparams.epochs - 1:
-      plot_transformation(plot_images[0], plot_images[1], gan, summary, epoch)
+      utils.plot_transformation(plot_images[0], plot_images[1], gan, summary,
+                                epoch)
+
+  utils.save_models(hparams, G, F, X, Y)
 
 
 if __name__ == '__main__':
@@ -145,10 +112,12 @@ if __name__ == '__main__':
   parser.add_argument('--critic_steps', default=5, type=int)
   parser.add_argument('--gradient_penalty', default=10.0, type=float)
   parser.add_argument('--cycle_error', default='mse', choices=['mse', 'mae'])
-  parser.add_argument('--clear_output_dir', action='store_true')
   parser.add_argument('--mixed_precision', action='store_true')
   parser.add_argument('--verbose', default=1, type=int)
   params = parser.parse_args()
+
+  np.random.seed(1234)
+  tf.random.set_seed(1234)
 
   params.global_step = 0
   main(params)

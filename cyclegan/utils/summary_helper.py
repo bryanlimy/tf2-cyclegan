@@ -1,8 +1,6 @@
 import os
 import io
-import shutil
 import platform
-import numpy as np
 import tensorflow as tf
 
 import matplotlib
@@ -11,8 +9,6 @@ if platform.system() == 'Darwin':
 
 import matplotlib.pyplot as plt
 plt.style.use('seaborn-deep')
-
-import seaborn as sns
 
 
 class Summary(object):

@@ -1,4 +1,4 @@
-__all__ = ['dataset_helper.py', 'summary_helper.py', 'utils']
+__all__ = ['dataset_helper', 'summary_helper', 'utils']
 
 from .dataset_helper import *
 from .summary_helper import *
