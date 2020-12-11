@@ -28,13 +28,13 @@ def random_jitter(image):
   return image
 
 
-def preprocess_train_image(image):
+def preprocess_train_image(image, label):
   image = random_jitter(image)
   image = normalize(image)
   return image
 
 
-def preprocess_validation_image(image):
+def preprocess_validation_image(image, label):
   image = normalize(image)
   return image
 
