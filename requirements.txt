@@ -3,5 +3,5 @@ yapf
 sklearn
 seaborn
 matplotlib
-tensorflow_datasets==4.1.0
+tensorflow_datasets
 tensorflow_addons
