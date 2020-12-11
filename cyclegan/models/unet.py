@@ -111,7 +111,7 @@ def discriminator(hparams, name='discriminator'):
   outputs = downsample(hparams, 256, 4, initializer=initializer)(outputs)
   outputs = downsample(hparams, 512, 4, initializer=initializer)(outputs)
 
-  outputs = layers.ZeroPadding2D()(outputs)
+  outputs = layers.ZeroPadding2D(padding=(1, 1))(outputs)
   outputs = layers.Conv2D(
       filters=512,
       kernel_size=4,
@@ -120,15 +120,10 @@ def discriminator(hparams, name='discriminator'):
       kernel_initializer=initializer)(outputs)
   outputs = utils.Normalization(hparams.normalizer)(outputs)
   outputs = utils.Activation(hparams.activation)(outputs)
-  outputs = layers.ZeroPadding2D()(outputs)
+  outputs = layers.ZeroPadding2D(padding=(1, 1))(outputs)
   outputs = layers.Conv2D(
       filters=1, kernel_size=4, strides=1,
       kernel_initializer=initializer)(outputs)
-
-  if not hparams.patch_gan:
-    outputs = layers.Flatten()(outputs)
-
-  outputs = layers.Dense(1)(outputs)
   outputs = layers.Activation('linear', dtype=tf.float32)(outputs)
 
   return tf.keras.Model(inputs=inputs, outputs=outputs, name=name)

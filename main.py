@@ -106,7 +106,6 @@ if __name__ == '__main__':
       '--alpha', default=10., type=float, help='cycle loss coefficient')
   parser.add_argument(
       '--beta', default=5., type=float, help='identity loss coefficient')
-  parser.add_argument('--patch_gan', action='store_true')
   parser.add_argument('--epochs', default=200, type=int)
   parser.add_argument('--batch_size', default=32, type=int)
   parser.add_argument('--learning_rate', default=2e-4, type=float)
