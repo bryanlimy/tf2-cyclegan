@@ -95,9 +95,6 @@ if __name__ == '__main__':
   parser.add_argument('--output_dir', default='runs')
   parser.add_argument('--algorithm', default='gan', type=str)
   parser.add_argument('--model', default='unet', type=str)
-  parser.add_argument('--num_units', default=32, type=int)
-  parser.add_argument('--kernel_size', default=24, type=int)
-  parser.add_argument('--strides', default=2, type=int)
   parser.add_argument('--activation', default='elu', type=str)
   parser.add_argument('--dropout', default=0.2, type=float)
   parser.add_argument(
