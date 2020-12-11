@@ -20,7 +20,7 @@ This repository implements CycleGAN ([Zhu et. al. 2017](https://arxiv.org/pdf/17
   ```
 - install required packages
   ```
-  pip install -r requirements.txt
+  sh setup.sh
   ```
 
 ### 2. Run codebase
