@@ -39,3 +39,14 @@ def plot_transformation(x, y, gan, summary, epoch):
         labels=['Y', 'F(Y)', 'G(F(Y))'],
         step=epoch,
         training=False)
+
+
+def update_dict(dict1, dict2, replace=False):
+  """ update dict1 with the items in dict2 """
+  for key, value in dict2.items():
+    if replace:
+      dict1[key] = value
+    else:
+      if key not in dict1:
+        dict1[key] = []
+      dict1[key].append(value)

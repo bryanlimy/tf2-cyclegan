@@ -26,11 +26,11 @@ class GAN:
 
     self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
-    self.discriminator_loss_coefficient = 0.5
-    self.cycle_loss_coefficient = 10
+    self.alpha = hparams.alpha
+    self.beta = hparams.beta
 
     self.mixed_precision = hparams.mixed_precision
-    self.error = utils.mse if hparams.cycle_error == 'mse' else utils.mae
+    self.error_function = utils.get_error_function(hparams.error)
 
   def get_models(self):
     return self.G, self.F, self.X, self.Y
@@ -44,15 +44,14 @@ class GAN:
         tf.ones_like(discriminate_real), discriminate_real)
     fake_loss = self.cross_entropy(
         tf.zeros_like(discriminate_fake), discriminate_fake)
-    total_loss = real_loss + fake_loss
-    return self.discriminator_loss_coefficient * total_loss
+    return 0.5 * (real_loss + fake_loss)
 
   def cycle_loss(self, real, cycled):
-    return self.cycle_loss_coefficient * self.error(real, cycled)
+    return self.alpha * self.error_function(real, cycled)
 
   def identity_loss(self, real, identity):
-    """ Calculate the MAE(x, F(x)) or MAE(y, G(y))"""
-    return self.cycle_loss_coefficient * 0.5 * self.error(real, identity)
+    """ calculate identity loss || x - F(x) || or || y - G(y) || """
+    return self.beta * self.error_function(real, identity)
 
   @tf.function
   def cycle_step(self, x, y, training=False):
@@ -80,22 +79,21 @@ class GAN:
       G_loss = self.generator_loss(discriminate_fake_y)
       F_loss = self.generator_loss(discriminate_fake_x)
 
-      result.update({'G_loss': G_loss, 'F_loss': F_loss})
-
       cycle_loss = self.cycle_loss(x, cycled_x) + self.cycle_loss(y, cycled_y)
 
-      result.update({'cycle_loss': cycle_loss})
-
-      x_identity_loss = self.identity_loss(x, self.F(x, training=True))
-      y_identity_loss = self.identity_loss(y, self.G(y, training=True))
+      G_identity_loss = self.identity_loss(y, self.G(y, training=True))
+      F_identity_loss = self.identity_loss(x, self.F(x, training=True))
 
       result.update({
-          'x_identity_loss': x_identity_loss,
-          'y_identity_loss': y_identity_loss
+          'G_loss': G_loss,
+          'F_loss': F_loss,
+          'cycle_loss': cycle_loss,
+          'G_identity_loss': G_identity_loss,
+          'F_identity_loss': F_identity_loss
       })
 
-      G_loss += cycle_loss + x_identity_loss
-      F_loss += cycle_loss + y_identity_loss
+      G_loss += cycle_loss + G_identity_loss
+      F_loss += cycle_loss + F_identity_loss
 
       X_loss = self.discriminator_loss(discriminate_x, discriminate_fake_x)
       Y_loss = self.discriminator_loss(discriminate_y, discriminate_fake_y)
@@ -123,8 +121,8 @@ class GAN:
     same_y = self.G(y, training=False)
 
     return {
-        'MSE(X, F(G(X)))': utils.mse(x, cycled_x),
-        'MSE(Y, G(F(Y)))': utils.mse(y, cycled_y),
-        'MSE(X, F(X))': utils.mse(x, same_x),
-        'MSE(Y, G(Y))': utils.mse(y, same_y)
+        'MSE(X, F(G(X)))': utils.mean_square_error(x, cycled_x),
+        'MSE(Y, G(F(Y)))': utils.mean_square_error(y, cycled_y),
+        'MSE(X, F(X))': utils.mean_square_error(x, same_x),
+        'MSE(Y, G(Y))': utils.mean_square_error(y, same_y)
     }

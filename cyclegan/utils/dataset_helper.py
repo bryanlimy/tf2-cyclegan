@@ -51,7 +51,8 @@ def prepare_dataset(hparams, ds, train=False):
   return ds
 
 
-cardinality = tf.data.experimental.cardinality
+def cardinality(ds):
+  return tf.data.experimental.cardinality(ds)
 
 
 def get_datasets(hparams):

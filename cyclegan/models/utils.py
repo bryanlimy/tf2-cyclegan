@@ -2,12 +2,30 @@ import io
 import os
 import numpy as np
 import tensorflow as tf
+import tensorflow_addons as tfa
 from tensorflow.keras import layers
 
 
 def Activation(name, **kwargs):
-  return layers.LeakyReLU(
-      **kwargs) if name == 'lrelu' else layers.Activation(name, **kwargs)
+  if name == 'lrelu':
+    return layers.LeakyReLU()
+  else:
+    return layers.Activation(name, **kwargs)
+
+
+def Normalization(name, **kwargs):
+  if name == 'layer_norm':
+    return layers.LayerNormalization(**kwargs)
+  elif name == 'batch_norm':
+    return layers.BatchNormalization(**kwargs)
+  elif name == 'instance_norm':
+    return tfa.layers.InstanceNormalization()
+  else:
+    return layers.Activation('linear')
+
+
+def Initializer(name):
+  return tf.keras.initializers.get(name)
 
 
 class Conv1DTranspose(layers.Layer):
@@ -34,7 +52,7 @@ class Conv1DTranspose(layers.Layer):
         kernel_initializer=kernel_initializer,
     )
 
-  def call(self, inputs):
+  def call(self, inputs, **kwargs):
     outputs = tf.expand_dims(inputs, axis=2)
     outputs = self.conv2dtranspose(outputs)
     outputs = tf.squeeze(outputs, axis=2)

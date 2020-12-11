@@ -1,8 +1,10 @@
+import os
 import argparse
 import numpy as np
 from tqdm import tqdm
 from time import time
 import tensorflow as tf
+from shutil import rmtree
 from tensorflow.keras.mixed_precision import experimental as mixed_precision
 
 from cyclegan.utils import utils
@@ -22,43 +24,37 @@ def set_precision_policy(hparams):
   return policy
 
 
-def train(hparams, x_ds, y_ds, gan, summary):
+def train(hparams, x_ds, y_ds, gan, summary, epoch):
+  metrics = {}
   for x, y in tqdm(
       tf.data.Dataset.zip((x_ds, y_ds)),
       desc='Train',
       total=hparams.train_steps):
-    loss = gan.train(x, y)
+    result = gan.train(x, y)
     hparams.global_step += 1
-
-    if hparams.global_step % 100 == 0:
-      for key, value in loss.items():
-        summary.scalar(f'loss/{key}', value, step=hparams.global_step)
+    utils.update_dict(metrics, result, replace=False)
+  for key, value in metrics.items():
+    summary.scalar(f'loss/{key}', tf.reduce_mean(value), epoch, training=True)
 
 
 def validate(hparams, x_ds, y_ds, gan, summary, epoch):
-  metrics = {
-      'MSE(X, F(G(X)))': [],
-      'MSE(Y, G(F(Y)))': [],
-      'MSE(X, F(X))': [],
-      'MSE(Y, G(Y))': []
-  }
-
+  metrics = {}
   for x, y in tqdm(
       tf.data.Dataset.zip((x_ds, y_ds)),
       desc='Validation',
       total=hparams.validation_steps):
     result = gan.validate(x, y)
-    metrics = {key: metrics[key] + [value] for key, value in result.items()}
-
+    utils.update_dict(metrics, result, replace=False)
   metrics = {key: np.mean(value) for key, value in metrics.items()}
-
   for key, value in metrics.items():
     summary.scalar(f'mse/{key}', value, epoch, training=False)
-
   return metrics
 
 
 def main(hparams):
+  if hparams.clear_output_dir and os.path.exists(hparams.output_dir):
+    rmtree(hparams.output_dir)
+
   tf.keras.backend.clear_session()
 
   set_precision_policy(hparams)
@@ -76,7 +72,7 @@ def main(hparams):
     print('Epoch {:03d}/{:03d}'.format(epoch + 1, hparams.epochs))
 
     start = time()
-    train(hparams, x_train, y_train, gan, summary)
+    train(hparams, x_train, y_train, gan, summary, epoch)
     metrics = validate(hparams, x_validation, y_validation, gan, summary, epoch)
     end = time()
     summary.scalar('elapse', end - start, step=epoch)
@@ -98,22 +94,35 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('--output_dir', default='runs')
   parser.add_argument('--algorithm', default='gan', type=str)
-  parser.add_argument('--model', default='mlp', type=str)
+  parser.add_argument('--model', default='unet', type=str)
   parser.add_argument('--num_units', default=32, type=int)
   parser.add_argument('--kernel_size', default=24, type=int)
   parser.add_argument('--strides', default=2, type=int)
-  parser.add_argument('--activation', default='lrelu', type=str)
+  parser.add_argument('--activation', default='elu', type=str)
   parser.add_argument('--dropout', default=0.2, type=float)
-  parser.add_argument('--layer_norm', action='store_true')
+  parser.add_argument(
+      '--normalizer',
+      default='layer_norm',
+      choices=[None, 'layer_norm', 'batch_norm', 'instance_norm'])
+  parser.add_argument('--initializer', default='glorot_uniform', type=str)
+  parser.add_argument(
+      '--alpha', default=10., type=float, help='cycle loss coefficient')
+  parser.add_argument(
+      '--beta', default=5., type=float, help='identity loss coefficient')
   parser.add_argument('--patch_gan', action='store_true')
   parser.add_argument('--epochs', default=200, type=int)
   parser.add_argument('--batch_size', default=32, type=int)
   parser.add_argument('--learning_rate', default=2e-4, type=float)
   parser.add_argument('--critic_steps', default=5, type=int)
   parser.add_argument('--gradient_penalty', default=10.0, type=float)
-  parser.add_argument('--cycle_error', default='mse', choices=['mse', 'mae'])
+  parser.add_argument(
+      '--error',
+      default='mae',
+      choices=['mse', 'mae', 'huber'],
+      help='error function to measure cycle loss and identity loss')
   parser.add_argument('--mixed_precision', action='store_true')
   parser.add_argument('--verbose', default=1, type=int)
+  parser.add_argument('--clear_output_dir', action='store_true')
   params = parser.parse_args()
 
   np.random.seed(1234)

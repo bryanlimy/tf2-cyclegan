@@ -4,7 +4,7 @@ import tensorflow as tf
 
 from . import utils
 from .gan import GAN
-from .optimizer import Optimizer
+from ..utils import update_dict
 
 
 @register('wgan_gp')
@@ -30,22 +30,21 @@ class WGAN_GP(GAN):
       G_loss = self.generator_loss(discriminate_fake_y)
       F_loss = self.generator_loss(discriminate_fake_x)
 
-      result.update({'G_loss': G_loss, 'F_loss': F_loss})
-
       cycle_loss = self.cycle_loss(x, cycled_x) + self.cycle_loss(y, cycled_y)
 
-      result.update({'cycle_loss': cycle_loss})
-
-      x_identity_loss = self.identity_loss(x, self.F(x, training=True))
-      y_identity_loss = self.identity_loss(y, self.G(y, training=True))
+      G_identity_loss = self.identity_loss(y, self.G(y, training=True))
+      F_identity_loss = self.identity_loss(x, self.F(x, training=True))
 
       result.update({
-          'x_identity_loss': x_identity_loss,
-          'y_identity_loss': y_identity_loss
+          'G_loss': G_loss,
+          'F_loss': F_loss,
+          'cycle_loss': cycle_loss,
+          'G_identity_loss': G_identity_loss,
+          'F_identity_loss': F_identity_loss
       })
 
-      G_loss += cycle_loss + x_identity_loss
-      F_loss += cycle_loss + y_identity_loss
+      G_loss += cycle_loss + G_identity_loss
+      F_loss += cycle_loss + F_identity_loss
 
       if self.mixed_precision:
         G_loss = self.G_optimizer.get_scaled_loss(G_loss)
@@ -69,7 +68,7 @@ class WGAN_GP(GAN):
       discriminate_interpolated = discriminator(interpolated, training=training)
     gradient = tape.gradient(discriminate_interpolated, interpolated)
     norm = tf.norm(tf.reshape(gradient, shape=(gradient.shape[0], -1)), axis=1)
-    return utils.mse(norm, 1.0)
+    return utils.mean_square_error(norm, 1.0)
 
   def discriminator_loss(self, discriminate_real, discriminate_fake):
     real_loss = -tf.reduce_mean(discriminate_real)
@@ -120,8 +119,8 @@ class WGAN_GP(GAN):
     result = {}
     for i in range(self.critic_steps):
       discriminator_results = self._train_discriminators(x, y)
-      utils.update_dict(result, discriminator_results)
+      update_dict(result, discriminator_results)
     generator_result = self._train_generators(x, y)
-    utils.update_dict(result, generator_result)
+    update_dict(result, generator_result)
     # calculate averages for all items in result
     return {key: tf.reduce_mean(value) for key, value in result.items()}
