@@ -79,12 +79,6 @@ def get_dataset(hparams):
   return train_horses, train_zebras, test_horses, test_zebras
 
 
-def save_figure(name):
-  if not os.path.exists('samples'):
-    os.makedirs('samples')
-  plt.savefig(os.path.join('samples', name), dpi=120, format='png')
-
-
 def generate_images(summary, generator_g, generator_f, real_horses, real_zebras,
                     epoch):
   fake_zebras = generator_g(real_horses, training=False)
@@ -432,7 +426,7 @@ def main(hparams):
           f'loss/{key}', tf.reduce_mean(values), epoch, training=True)
     for key, values in val_metrics.items():
       summary.scalar(
-          f'loss/{key}', tf.reduce_mean(values), epoch, training=True)
+          f'mse/{key}', tf.reduce_mean(values), epoch, training=False)
 
     print(f'MSE(X, F(G(X))): {np.mean(val_metrics["MSE(X, F(G(X)))"]):.04f}\t\t'
           f'MSE(X, F(X)): {np.mean(val_metrics["MSE(Y, G(F(Y)))"]):.04f}\n'
