@@ -49,11 +49,11 @@ class GAN:
     return 0.5 * (real_loss + fake_loss)
 
   def cycle_loss(self, real, cycled):
-    return 10.0 * self.error_function(real, cycled)
+    return self.alpha * self.error_function(real, cycled)
 
   def identity_loss(self, real, identity):
     """ calculate identity loss || x - F(x) || or || y - G(y) || """
-    return 0.5 * 10.0 * self.error_function(real, identity)
+    return self.beta * self.error_function(real, identity)
 
   @tf.function
   def cycle_step(self, x, y, training=False):

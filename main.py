@@ -95,11 +95,11 @@ if __name__ == '__main__':
   parser.add_argument('--output_dir', default='runs')
   parser.add_argument('--algorithm', default='gan', type=str)
   parser.add_argument('--model', default='unet', type=str)
-  parser.add_argument('--activation', default='elu', type=str)
-  parser.add_argument('--dropout', default=0.2, type=float)
+  parser.add_argument('--activation', default='lrelu', type=str)
+  parser.add_argument('--dropout', default=0.25, type=float)
   parser.add_argument(
       '--normalizer',
-      default='layer_norm',
+      default='instance_norm',
       choices=[None, 'layer_norm', 'batch_norm', 'instance_norm'])
   parser.add_argument('--initializer', default='glorot_uniform', type=str)
   parser.add_argument(

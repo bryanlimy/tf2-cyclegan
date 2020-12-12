@@ -2,7 +2,7 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
-BUFFER_SIZE = 1024
+BUFFER_SIZE = 1000
 IMG_HEIGHT, IMG_WIDTH = 256, 256
 
 
@@ -75,5 +75,6 @@ def get_datasets(hparams):
   hparams.validation_steps = int(
       min(cardinality(x_validation), cardinality(y_validation)))
   hparams.image_shape = (IMG_HEIGHT, IMG_WIDTH, 3)
+  hparams.num_channels = 3
 
   return x_train, x_validation, y_train, y_validation
