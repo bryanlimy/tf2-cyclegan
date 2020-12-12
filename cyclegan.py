@@ -442,7 +442,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('--output_dir', default='runs')
   parser.add_argument('--epochs', default=200, type=int)
-  parser.add_argument('--batch_size', default=14, type=int)
+  parser.add_argument('--batch_size', default=16, type=int)
   params = parser.parse_args()
 
   np.random.seed(1234)
