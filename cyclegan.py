@@ -423,8 +423,7 @@ def main(hparams):
         tf.data.Dataset.zip((test_horses, test_zebras)),
         desc='Validation',
         total=num_val_steps):
-      log = validation_step(image_x, image_y, generator_g, generator_f,
-                            discriminator_x, discriminator_y)
+      log = validation_step(image_x, image_y, generator_g, generator_f)
       update_dict(val_metrics, log, replace=False)
     end = time.time()
 
