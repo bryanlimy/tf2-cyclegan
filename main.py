@@ -15,7 +15,6 @@ from cyclegan.utils.dataset_helper import get_datasets
 
 
 def set_precision_policy(hparams):
-
   policy = mixed_precision.Policy('mixed_float16' if hparams.
                                   mixed_precision else 'float32')
   mixed_precision.set_policy(policy)
@@ -58,7 +57,7 @@ def main(hparams):
 
   tf.keras.backend.clear_session()
 
-  # set_precision_policy(hparams)
+  set_precision_policy(hparams)
 
   summary = Summary(hparams)
   x_train, x_validation, y_train, y_validation = get_datasets(hparams)

@@ -1,7 +1,6 @@
 from .registry import register
 
 import tensorflow as tf
-from tensorflow.keras.optimizers import Adam
 
 from . import utils
 from .optimizer import Optimizer
@@ -20,14 +19,10 @@ class GAN:
     self.X = X
     self.Y = Y
 
-    # self.G_optimizer = Optimizer(hparams)
-    # self.F_optimizer = Optimizer(hparams)
-    # self.X_optimizer = Optimizer(hparams)
-    # self.Y_optimizer = Optimizer(hparams)
-    self.G_optimizer = Adam(hparams.learning_rate, beta_1=0.5)
-    self.F_optimizer = Adam(hparams.learning_rate, beta_1=0.5)
-    self.X_optimizer = Adam(hparams.learning_rate, beta_1=0.5)
-    self.Y_optimizer = Adam(hparams.learning_rate, beta_1=0.5)
+    self.G_optimizer = Optimizer(hparams)
+    self.F_optimizer = Optimizer(hparams)
+    self.X_optimizer = Optimizer(hparams)
+    self.Y_optimizer = Optimizer(hparams)
 
     self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
@@ -69,6 +64,7 @@ class GAN:
 
   @tf.function
   def train(self, x, y):
+    result = {}
     with tf.GradientTape(persistent=True) as tape:
       fake_y = self.G(x, training=True)
       cycled_x = self.F(fake_y, training=True)
@@ -92,35 +88,34 @@ class GAN:
       G_identity_loss = self.identity_loss(y, same_y)
       F_identity_loss = self.identity_loss(x, same_x)
 
-      total_G_loss = G_loss + cycle_loss + G_identity_loss
-      total_F_loss = F_loss + cycle_loss + F_identity_loss
+      result.update({
+          'G_loss': G_loss,
+          'F_loss': F_loss,
+          'cycle_loss': cycle_loss,
+          'G_identity_loss': G_identity_loss,
+          'F_identity_loss': F_identity_loss,
+      })
+
+      G_loss += cycle_loss + G_identity_loss
+      F_loss += cycle_loss + F_identity_loss
 
       X_loss = self.discriminator_loss(discriminate_x, discriminate_fake_x)
       Y_loss = self.discriminator_loss(discriminate_y, discriminate_fake_y)
 
-    G_gradient = tape.gradient(total_G_loss, self.G.trainable_variables)
-    F_gradient = tape.gradient(total_F_loss, self.F.trainable_variables)
-    X_gradient = tape.gradient(X_loss, self.X.trainable_variables)
-    Y_gradient = tape.gradient(Y_loss, self.Y.trainable_variables)
+      result.update({'X_loss': X_loss, 'Y_loss': Y_loss})
 
-    self.G_optimizer.apply_gradients(
-        zip(G_gradient, self.G.trainable_variables))
-    self.F_optimizer.apply_gradients(
-        zip(F_gradient, self.F.trainable_variables))
-    self.X_optimizer.apply_gradients(
-        zip(X_gradient, self.X.trainable_variables))
-    self.Y_optimizer.apply_gradients(
-        zip(Y_gradient, self.Y.trainable_variables))
+      if self.mixed_precision:
+        G_loss = self.G_optimizer.get_scaled_loss(G_loss)
+        F_loss = self.F_optimizer.get_scaled_loss(F_loss)
+        X_loss = self.X_optimizer.get_scaled_loss(X_loss)
+        Y_loss = self.Y_optimizer.get_scaled_loss(Y_loss)
 
-    return {
-        'G_loss': G_loss,
-        'F_loss': F_loss,
-        'cycle_loss': cycle_loss,
-        'G_identity_loss': G_identity_loss,
-        'F_identity_loss': F_identity_loss,
-        'X_loss': X_loss,
-        'Y_loss': Y_loss
-    }
+    self.G_optimizer.update(self.G, G_loss, tape)
+    self.F_optimizer.update(self.F, F_loss, tape)
+    self.X_optimizer.update(self.X, X_loss, tape)
+    self.Y_optimizer.update(self.Y, Y_loss, tape)
+
+    return result
 
   @tf.function
   def validate(self, x, y):
