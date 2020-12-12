@@ -1,6 +1,7 @@
 from .registry import register
 
 import tensorflow as tf
+from tensorflow.keras.optimizers import Adam
 
 from . import utils
 from .optimizer import Optimizer
@@ -19,10 +20,14 @@ class GAN:
     self.X = X
     self.Y = Y
 
-    self.G_optimizer = Optimizer(hparams)
-    self.F_optimizer = Optimizer(hparams)
-    self.X_optimizer = Optimizer(hparams)
-    self.Y_optimizer = Optimizer(hparams)
+    # self.G_optimizer = Optimizer(hparams)
+    # self.F_optimizer = Optimizer(hparams)
+    # self.X_optimizer = Optimizer(hparams)
+    # self.Y_optimizer = Optimizer(hparams)
+    self.G_optimizer = Adam(hparams.learning_rate, beta_1=0.5)
+    self.F_optimizer = Adam(hparams.learning_rate, beta_1=0.5)
+    self.X_optimizer = Adam(hparams.learning_rate, beta_1=0.5)
+    self.Y_optimizer = Adam(hparams.learning_rate, beta_1=0.5)
 
     self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
@@ -31,9 +36,6 @@ class GAN:
 
     self.mixed_precision = hparams.mixed_precision
     self.error_function = utils.get_error_function(hparams.error)
-
-  def get_models(self):
-    return self.G, self.F, self.X, self.Y
 
   def generator_loss(self, discriminate_fake):
     return self.cross_entropy(
@@ -47,11 +49,11 @@ class GAN:
     return 0.5 * (real_loss + fake_loss)
 
   def cycle_loss(self, real, cycled):
-    return self.alpha * self.error_function(real, cycled)
+    return 10.0 * self.error_function(real, cycled)
 
   def identity_loss(self, real, identity):
     """ calculate identity loss || x - F(x) || or || y - G(y) || """
-    return self.beta * self.error_function(real, identity)
+    return 0.5 * 10.0 * self.error_function(real, identity)
 
   @tf.function
   def cycle_step(self, x, y, training=False):
@@ -96,16 +98,19 @@ class GAN:
       X_loss = self.discriminator_loss(discriminate_x, discriminate_fake_x)
       Y_loss = self.discriminator_loss(discriminate_y, discriminate_fake_y)
 
-      if self.mixed_precision:
-        total_G_loss = self.G_optimizer.get_scaled_loss(total_G_loss)
-        total_F_loss = self.F_optimizer.get_scaled_loss(total_F_loss)
-        X_loss = self.X_optimizer.get_scaled_loss(X_loss)
-        Y_loss = self.Y_optimizer.get_scaled_loss(Y_loss)
+    G_gradient = tape.gradient(total_G_loss, self.G.trainable_variables)
+    F_gradient = tape.gradient(total_F_loss, self.F.trainable_variables)
+    X_gradient = tape.gradient(X_loss, self.X.trainable_variables)
+    Y_gradient = tape.gradient(Y_loss, self.Y.trainable_variables)
 
-    self.G_optimizer.update(self.G, total_G_loss, tape)
-    self.F_optimizer.update(self.F, total_F_loss, tape)
-    self.X_optimizer.update(self.X, X_loss, tape)
-    self.Y_optimizer.update(self.Y, Y_loss, tape)
+    self.G_optimizer.apply_gradients(
+        zip(G_gradient, self.G.trainable_variables))
+    self.F_optimizer.apply_gradients(
+        zip(F_gradient, self.F.trainable_variables))
+    self.X_optimizer.apply_gradients(
+        zip(X_gradient, self.X.trainable_variables))
+    self.Y_optimizer.apply_gradients(
+        zip(Y_gradient, self.Y.trainable_variables))
 
     return {
         'G_loss': G_loss,

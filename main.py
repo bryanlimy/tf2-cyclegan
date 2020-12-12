@@ -15,6 +15,7 @@ from cyclegan.utils.dataset_helper import get_datasets
 
 
 def set_precision_policy(hparams):
+
   policy = mixed_precision.Policy('mixed_float16' if hparams.
                                   mixed_precision else 'float32')
   mixed_precision.set_policy(policy)
@@ -57,7 +58,7 @@ def main(hparams):
 
   tf.keras.backend.clear_session()
 
-  set_precision_policy(hparams)
+  # set_precision_policy(hparams)
 
   summary = Summary(hparams)
   x_train, x_validation, y_train, y_validation = get_datasets(hparams)
@@ -66,7 +67,7 @@ def main(hparams):
   gan = get_algorithm(hparams, G, F, X, Y)
 
   # store the images to plot
-  plot_images = next(iter(tf.data.Dataset.zip((x_validation, y_validation))))
+  sample_x, sample_y = next(iter(x_train)), next(iter(y_train))
 
   for epoch in range(hparams.epochs):
     print('Epoch {:03d}/{:03d}'.format(epoch + 1, hparams.epochs))
@@ -84,8 +85,7 @@ def main(hparams):
           f'Elapse: {(end - start) / 60:.02f} mins\n')
 
     if epoch % 10 == 0 or epoch == hparams.epochs - 1:
-      utils.plot_transformation(plot_images[0], plot_images[1], gan, summary,
-                                epoch)
+      utils.plot_transformation(sample_x, sample_y, gan, summary, epoch)
 
   utils.save_models(hparams, G, F, X, Y)
 
