@@ -1,5 +1,6 @@
 import os
 import time
+import argparse
 import numpy as np
 from tqdm import tqdm
 import tensorflow as tf
@@ -7,19 +8,17 @@ import matplotlib.pyplot as plt
 import tensorflow_addons as tfa
 import tensorflow_datasets as tfds
 
+from cyclegan.utils import utils
+from cyclegan.utils.summary_helper import Summary
+
 AUTOTUNE = tf.data.experimental.AUTOTUNE
-
-dataset, metadata = tfds.load(
-    'cycle_gan/horse2zebra', with_info=True, as_supervised=True)
-
-train_horses, train_zebras = dataset['trainA'], dataset['trainB']
-test_horses, test_zebras = dataset['testA'], dataset['testB']
-
+EPOCHS = 200
 BUFFER_SIZE = 1000
 BATCH_SIZE = 14
+LAMBDA = 10
 IMG_WIDTH = 256
 IMG_HEIGHT = 256
-EPOCHS = 200
+OUTPUT_CHANNELS = 3
 
 
 def random_crop(image):
@@ -52,29 +51,79 @@ def preprocess_image_test(image, label):
   return image
 
 
-train_horses = train_horses.map(
-    preprocess_image_train,
-    num_parallel_calls=AUTOTUNE).cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+def get_dataset():
+  dataset, metadata = tfds.load(
+      'cycle_gan/horse2zebra', with_info=True, as_supervised=True)
 
-train_zebras = train_zebras.map(
-    preprocess_image_train,
-    num_parallel_calls=AUTOTUNE).cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+  train_horses, train_zebras = dataset['trainA'], dataset['trainB']
+  test_horses, test_zebras = dataset['testA'], dataset['testB']
 
-test_horses = test_horses.map(
-    preprocess_image_test,
-    num_parallel_calls=AUTOTUNE).cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+  train_horses = train_horses.map(
+      preprocess_image_train, num_parallel_calls=AUTOTUNE).cache().shuffle(
+          BUFFER_SIZE).batch(BATCH_SIZE)
 
-test_zebras = test_zebras.map(
-    preprocess_image_test,
-    num_parallel_calls=AUTOTUNE).cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+  train_zebras = train_zebras.map(
+      preprocess_image_train, num_parallel_calls=AUTOTUNE).cache().shuffle(
+          BUFFER_SIZE).batch(BATCH_SIZE)
 
-NUM_TRAIN_STEPS = int(tf.data.experimental.cardinality(train_horses))
-NUM_VAL_STEPS = int(tf.data.experimental.cardinality(test_horses))
+  test_horses = test_horses.map(
+      preprocess_image_test, num_parallel_calls=AUTOTUNE).cache().shuffle(
+          BUFFER_SIZE).batch(BATCH_SIZE)
 
-sample_horse = next(iter(train_horses))
-sample_zebra = next(iter(train_zebras))
+  test_zebras = test_zebras.map(
+      preprocess_image_test, num_parallel_calls=AUTOTUNE).cache().shuffle(
+          BUFFER_SIZE).batch(BATCH_SIZE)
 
-OUTPUT_CHANNELS = 3
+  return train_horses, train_zebras, test_horses, test_zebras
+
+
+def save_figure(name):
+  if not os.path.exists('samples'):
+    os.makedirs('samples')
+  plt.savefig(os.path.join('samples', name), dpi=120, format='png')
+
+
+def generate_images(summary, generator_g, generator_f, real_horses, real_zebras,
+                    epoch):
+  fake_zebras = generator_g(real_horses, training=False)
+  cycled_horses = generator_f(fake_zebras, training=False)
+
+  fake_horses = generator_f(real_zebras, training=False)
+  cycled_zebras = generator_g(fake_horses, training=False)
+
+  for i in range(3):
+    summary.plot_transformation(
+        f'X cycle/image_{i + 1:02d}',
+        images=[
+            real_horses[i, ...],
+            fake_zebras[i, ...],
+            cycled_horses[i, ...],
+        ],
+        labels=['X', 'G(X)', 'F(G(X))'],
+        step=epoch,
+        training=False)
+
+    summary.plot_transformation(
+        f'Y cycle/image_{i + 1:02d}',
+        images=[
+            real_zebras[i, ...],
+            fake_horses[i, ...],
+            cycled_zebras[i, ...],
+        ],
+        labels=['Y', 'F(Y)', 'G(F(Y))'],
+        step=epoch,
+        training=False)
+
+
+def update_dict(dict1, dict2, replace=False):
+  """ update dict1 with the items in dict2 """
+  for key, value in dict2.items():
+    if replace:
+      dict1[key] = value
+    else:
+      if key not in dict1:
+        dict1[key] = []
+      dict1[key].append(value)
 
 
 def downsample(filters, size, norm_type='batchnorm', apply_norm=True):
@@ -178,73 +227,27 @@ def unet_generator(output_channels, norm_type='batchnorm'):
 def discriminator(norm_type='batchnorm'):
   assert norm_type in ['batchnorm', 'instancenorm']
   initializer = tf.random_normal_initializer(0., 0.02)
-
   inp = tf.keras.layers.Input(shape=[None, None, 3], name='input_image')
   x = inp
-
   down1 = downsample(64, 4, norm_type, False)(x)
   down2 = downsample(128, 4, norm_type)(down1)
   down3 = downsample(256, 4, norm_type)(down2)
-
   zero_pad1 = tf.keras.layers.ZeroPadding2D()(down3)
   conv = tf.keras.layers.Conv2D(
       512, 4, strides=1, kernel_initializer=initializer,
       use_bias=False)(zero_pad1)
-
   if norm_type == 'batchnorm':
     norm1 = tf.keras.layers.BatchNormalization()(conv)
   else:
     norm1 = tfa.layers.InstanceNormalization()(conv)
-
   leaky_relu = tf.keras.layers.LeakyReLU()(norm1)
-
   zero_pad2 = tf.keras.layers.ZeroPadding2D()(leaky_relu)
-
   last = tf.keras.layers.Conv2D(
       1, 4, strides=1, kernel_initializer=initializer)(zero_pad2)
-
   return tf.keras.Model(inputs=inp, outputs=last)
 
 
-generator_g = unet_generator(OUTPUT_CHANNELS, norm_type='instancenorm')
-generator_f = unet_generator(OUTPUT_CHANNELS, norm_type='instancenorm')
-
-discriminator_x = discriminator(norm_type='instancenorm')
-discriminator_y = discriminator(norm_type='instancenorm')
-
-LAMBDA = 10
-loss_obj = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-
-
-def save_figure(name):
-  if not os.path.exists('samples'):
-    os.makedirs('samples')
-  plt.savefig(os.path.join('samples', name), dpi=120, format='png')
-
-
-def generate_images(model, test_input, current_epoch):
-  prediction = model(test_input)
-  plt.figure(figsize=(12, 12))
-  display_list = [test_input[0], prediction[0]]
-  title = ['Input Image', 'Predicted Image']
-  for i in range(2):
-    plt.subplot(1, 2, i + 1)
-    plt.title(title[i])
-    plt.imshow(display_list[i] * 0.5 + 0.5)
-    plt.axis('off')
-  save_figure(name=f'epoch_{current_epoch+1:03d}.png')
-  plt.close()
-
-
-def update_dict(dict1, dict2, replace=False):
-  """ update dict1 with the items in dict2 """
-  for key, value in dict2.items():
-    if replace:
-      dict1[key] = value
-    else:
-      if key not in dict1:
-        dict1[key] = []
-      dict1[key].append(value)
+loss_function = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
 
 def mean_square_error(y_true, y_pred):
@@ -252,14 +255,14 @@ def mean_square_error(y_true, y_pred):
 
 
 def discriminator_loss(real, generated):
-  real_loss = loss_obj(tf.ones_like(real), real)
-  generated_loss = loss_obj(tf.zeros_like(generated), generated)
+  real_loss = loss_function(tf.ones_like(real), real)
+  generated_loss = loss_function(tf.zeros_like(generated), generated)
   total_disc_loss = real_loss + generated_loss
   return total_disc_loss * 0.5
 
 
 def generator_loss(generated):
-  return loss_obj(tf.ones_like(generated), generated)
+  return loss_function(tf.ones_like(generated), generated)
 
 
 def calc_cycle_loss(real_image, cycled_image):
@@ -270,15 +273,19 @@ def identity_loss(real_image, same_image):
   return LAMBDA * 0.5 * tf.reduce_mean(tf.abs(real_image - same_image))
 
 
-generator_g_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
-generator_f_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
-
-discriminator_x_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
-discriminator_y_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
-
-
 @tf.function
-def train_step(real_x, real_y):
+def train_step(
+    real_x,
+    real_y,
+    generator_g,
+    generator_f,
+    discriminator_x,
+    discriminator_y,
+    generator_g_optimizer,
+    generator_f_optimizer,
+    discriminator_x_optimizer,
+    discriminator_y_optimizer,
+):
   with tf.GradientTape(persistent=True) as tape:
     fake_y = generator_g(real_x, training=True)
     cycled_x = generator_f(fake_y, training=True)
@@ -287,8 +294,11 @@ def train_step(real_x, real_y):
     cycled_y = generator_g(fake_x, training=True)
 
     # same_x and same_y are used for identity loss.
-    same_x = generator_f(real_x, training=True)
     same_y = generator_g(real_y, training=True)
+    same_x = generator_f(real_x, training=True)
+
+    g_identity_loss = identity_loss(real_y, same_y)
+    f_identity_loss = identity_loss(real_x, same_x)
 
     disc_real_x = discriminator_x(real_x, training=True)
     disc_real_y = discriminator_y(real_y, training=True)
@@ -303,8 +313,8 @@ def train_step(real_x, real_y):
     cycle_loss = calc_cycle_loss(real_x, cycled_x) + calc_cycle_loss(
         real_y, cycled_y)
 
-    total_gen_g_loss = gen_g_loss + cycle_loss + identity_loss(real_y, same_y)
-    total_gen_f_loss = gen_f_loss + cycle_loss + identity_loss(real_x, same_x)
+    total_gen_g_loss = gen_g_loss + cycle_loss + g_identity_loss
+    total_gen_f_loss = gen_f_loss + cycle_loss + f_identity_loss
 
     disc_x_loss = discriminator_loss(disc_real_x, disc_fake_x)
     disc_y_loss = discriminator_loss(disc_real_y, disc_fake_y)
@@ -334,16 +344,18 @@ def train_step(real_x, real_y):
       zip(discriminator_y_gradients, discriminator_y.trainable_variables))
 
   return {
-      'g_loss': gen_g_loss,
-      'f_loss': gen_f_loss,
-      'x_loss': disc_x_loss,
-      'y_loss': disc_y_loss,
-      'cycle_loss': cycle_loss
+      'G_loss': gen_g_loss,
+      'F_loss': gen_f_loss,
+      'X_loss': disc_x_loss,
+      'Y_loss': disc_y_loss,
+      'cycle_loss': cycle_loss,
+      'G_identity_loss': g_identity_loss,
+      'F_identity_loss': f_identity_loss
   }
 
 
 @tf.function
-def validation_step(real_x, real_y):
+def validation_step(real_x, real_y, generator_g, generator_f):
   fake_y = generator_g(real_x, training=True)
   cycled_x = generator_f(fake_y, training=True)
 
@@ -361,28 +373,84 @@ def validation_step(real_x, real_y):
   }
 
 
-for epoch in range(EPOCHS):
-  print(f'Epoch {epoch+1:03d}/{EPOCHS:03d}')
-  train_metrics, val_metrics = {}, {}
-  start = time.time()
-  for image_x, image_y in tqdm(
-      tf.data.Dataset.zip((train_horses, train_zebras)),
-      desc='Train',
-      total=NUM_TRAIN_STEPS):
-    log = train_step(image_x, image_y)
-    update_dict(train_metrics, log, replace=False)
-  for image_x, image_y in tqdm(
-      tf.data.Dataset.zip((test_horses, test_zebras)),
-      desc='Validation',
-      total=NUM_VAL_STEPS):
-    log = validation_step(image_x, image_y)
-    update_dict(val_metrics, log, replace=False)
-  end = time.time()
+def main(hparams):
+  train_horses, train_zebras, test_horses, test_zebras = get_dataset()
 
-  print(f'MSE(X, F(G(X))): {np.mean(val_metrics["MSE(X, F(G(X)))"]):.04f}\t\t'
-        f'MSE(X, F(X)): {np.mean(val_metrics["MSE(Y, G(F(Y)))"]):.04f}\n'
-        f'MSE(Y, G(F(Y))): {np.mean(val_metrics["MSE(X, F(X))"]):.04f}\t\t'
-        f'MSE(Y, G(Y)): {np.mean(val_metrics["MSE(Y, G(Y))"]):.04f}\n'
-        f'Elapse: {(end - start) / 60:.02f} mins\n')
+  num_train_steps = int(tf.data.experimental.cardinality(train_horses))
+  num_val_steps = int(tf.data.experimental.cardinality(test_horses))
 
-  generate_images(generator_g, sample_horse, epoch)
+  sample_horse = next(iter(train_horses))
+  sample_zebra = next(iter(train_zebras))
+
+  generator_g = unet_generator(OUTPUT_CHANNELS, norm_type='instancenorm')
+  generator_f = unet_generator(OUTPUT_CHANNELS, norm_type='instancenorm')
+
+  discriminator_x = discriminator(norm_type='instancenorm')
+  discriminator_y = discriminator(norm_type='instancenorm')
+
+  generator_g_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+  generator_f_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+
+  discriminator_x_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+  discriminator_y_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+
+  summary = Summary(hparams)
+
+  for epoch in range(EPOCHS):
+    print(f'Epoch {epoch+1:03d}/{EPOCHS:03d}')
+    train_metrics, val_metrics = {}, {}
+    start = time.time()
+    for image_x, image_y in tqdm(
+        tf.data.Dataset.zip((train_horses, train_zebras)),
+        desc='Train',
+        total=num_train_steps):
+      log = train_step(
+          image_x,
+          image_y,
+          generator_g,
+          generator_f,
+          discriminator_x,
+          discriminator_y,
+          generator_g_optimizer,
+          generator_f_optimizer,
+          discriminator_x_optimizer,
+          discriminator_y_optimizer,
+      )
+      update_dict(train_metrics, log, replace=False)
+    for image_x, image_y in tqdm(
+        tf.data.Dataset.zip((test_horses, test_zebras)),
+        desc='Validation',
+        total=num_val_steps):
+      log = validation_step(image_x, image_y, generator_g, generator_f,
+                            discriminator_x, discriminator_y)
+      update_dict(val_metrics, log, replace=False)
+    end = time.time()
+
+    for key, values in train_metrics.items():
+      summary.scalar(
+          f'loss/{key}', tf.reduce_mean(values), epoch, training=True)
+    for key, values in val_metrics.items():
+      summary.scalar(
+          f'loss/{key}', tf.reduce_mean(values), epoch, training=True)
+
+    print(f'MSE(X, F(G(X))): {np.mean(val_metrics["MSE(X, F(G(X)))"]):.04f}\t\t'
+          f'MSE(X, F(X)): {np.mean(val_metrics["MSE(Y, G(F(Y)))"]):.04f}\n'
+          f'MSE(Y, G(F(Y))): {np.mean(val_metrics["MSE(X, F(X))"]):.04f}\t\t'
+          f'MSE(Y, G(Y)): {np.mean(val_metrics["MSE(Y, G(Y))"]):.04f}\n'
+          f'Elapse: {(end - start) / 60:.02f} mins\n')
+
+    generate_images(summary, generator_g, generator_f, sample_horse,
+                    sample_zebra, epoch)
+
+
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--output_dir', default='runs')
+  parser.add_argument('--epochs', default=200, type=int)
+  parser.add_argument('--batch_size', default=32, type=int)
+  params = parser.parse_args()
+
+  np.random.seed(1234)
+  tf.random.set_seed(1234)
+
+  main(params)
