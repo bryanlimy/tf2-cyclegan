@@ -1,4 +1,3 @@
-import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.mixed_precision import experimental as mixed_precision
 

@@ -67,9 +67,12 @@ class GAN:
 
   @tf.function
   def train(self, x, y):
-    result = {}
     with tf.GradientTape(persistent=True) as tape:
-      fake_x, fake_y, cycled_x, cycled_y = self.cycle_step(x, y, training=True)
+      fake_y = self.G(x, training=True)
+      cycled_x = self.F(fake_y, training=True)
+
+      fake_x = self.F(y, training=True)
+      cycled_y = self.G(fake_x, training=True)
 
       discriminate_x = self.X(x, training=True)
       discriminate_y = self.Y(y, training=True)
@@ -81,44 +84,49 @@ class GAN:
 
       cycle_loss = self.cycle_loss(x, cycled_x) + self.cycle_loss(y, cycled_y)
 
-      G_identity_loss = self.identity_loss(y, self.G(y, training=True))
-      F_identity_loss = self.identity_loss(x, self.F(x, training=True))
+      # calculate identity loss
+      same_y = self.G(y, training=True)
+      same_x = self.F(x, training=True)
+      G_identity_loss = self.identity_loss(y, same_y)
+      F_identity_loss = self.identity_loss(x, same_x)
 
-      result.update({
-          'G_loss': G_loss,
-          'F_loss': F_loss,
-          'cycle_loss': cycle_loss,
-          'G_identity_loss': G_identity_loss,
-          'F_identity_loss': F_identity_loss
-      })
-
-      G_loss += cycle_loss + G_identity_loss
-      F_loss += cycle_loss + F_identity_loss
+      total_G_loss = G_loss + cycle_loss + G_identity_loss
+      total_F_loss = F_loss + cycle_loss + F_identity_loss
 
       X_loss = self.discriminator_loss(discriminate_x, discriminate_fake_x)
       Y_loss = self.discriminator_loss(discriminate_y, discriminate_fake_y)
 
-      result.update({'X_loss': X_loss, 'Y_loss': Y_loss})
-
       if self.mixed_precision:
-        G_loss = self.G_optimizer.get_scaled_loss(G_loss)
-        F_loss = self.F_optimizer.get_scaled_loss(F_loss)
+        total_G_loss = self.G_optimizer.get_scaled_loss(total_G_loss)
+        total_F_loss = self.F_optimizer.get_scaled_loss(total_F_loss)
         X_loss = self.X_optimizer.get_scaled_loss(X_loss)
         Y_loss = self.Y_optimizer.get_scaled_loss(Y_loss)
 
-    self.G_optimizer.update(self.G, G_loss, tape)
-    self.F_optimizer.update(self.F, F_loss, tape)
+    self.G_optimizer.update(self.G, total_G_loss, tape)
+    self.F_optimizer.update(self.F, total_F_loss, tape)
     self.X_optimizer.update(self.X, X_loss, tape)
     self.Y_optimizer.update(self.Y, Y_loss, tape)
 
-    return result
+    return {
+        'G_loss': G_loss,
+        'F_loss': F_loss,
+        'cycle_loss': cycle_loss,
+        'G_identity_loss': G_identity_loss,
+        'F_identity_loss': F_identity_loss,
+        'X_loss': X_loss,
+        'Y_loss': Y_loss
+    }
 
   @tf.function
   def validate(self, x, y):
-    _, _, cycled_x, cycled_y = self.cycle_step(x, y, training=False)
+    fake_y = self.G(x, training=False)
+    cycled_x = self.F(fake_y, training=False)
 
-    same_x = self.F(x, training=False)
+    fake_x = self.F(y, training=False)
+    cycled_y = self.G(fake_x, training=False)
+
     same_y = self.G(y, training=False)
+    same_x = self.F(x, training=False)
 
     return {
         'MSE(X, F(G(X)))': utils.mean_square_error(x, cycled_x),

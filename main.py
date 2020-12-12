@@ -45,9 +45,9 @@ def validate(hparams, x_ds, y_ds, gan, summary, epoch):
       total=hparams.validation_steps):
     result = gan.validate(x, y)
     utils.update_dict(metrics, result, replace=False)
-  metrics = {key: np.mean(value) for key, value in metrics.items()}
   for key, value in metrics.items():
-    summary.scalar(f'mse/{key}', value, epoch, training=False)
+    metrics[key] = tf.reduce_mean(value)
+    summary.scalar(f'mse/{key}', metrics[key], epoch, training=False)
   return metrics
 
 

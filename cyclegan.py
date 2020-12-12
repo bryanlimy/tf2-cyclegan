@@ -343,14 +343,14 @@ def train_step(
 
 @tf.function
 def validation_step(real_x, real_y, generator_g, generator_f):
-  fake_y = generator_g(real_x, training=True)
-  cycled_x = generator_f(fake_y, training=True)
+  fake_y = generator_g(real_x, training=False)
+  cycled_x = generator_f(fake_y, training=False)
 
-  fake_x = generator_f(real_y, training=True)
-  cycled_y = generator_g(fake_x, training=True)
+  fake_x = generator_f(real_y, training=False)
+  cycled_y = generator_g(fake_x, training=False)
 
-  same_x = generator_f(real_x, training=True)
-  same_y = generator_g(real_y, training=True)
+  same_y = generator_g(real_y, training=False)
+  same_x = generator_f(real_x, training=False)
 
   return {
       'MSE(X, F(G(X)))': mean_square_error(real_x, cycled_x),
@@ -425,8 +425,9 @@ def main(hparams):
           f'MSE(Y, G(Y)): {np.mean(val_metrics["MSE(Y, G(Y))"]):.04f}\n'
           f'Elapse: {(end - start) / 60:.02f} mins\n')
 
-    generate_images(summary, generator_g, generator_f, sample_horse,
-                    sample_zebra, epoch)
+    if epoch % 10 == 0 or epoch == hparams.epochs - 1:
+      generate_images(summary, generator_g, generator_f, sample_horse,
+                      sample_zebra, epoch)
 
 
 if __name__ == '__main__':
