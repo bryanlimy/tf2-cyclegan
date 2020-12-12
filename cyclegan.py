@@ -376,7 +376,7 @@ def validation_step(real_x, real_y, generator_g, generator_f):
 
 
 def main(hparams):
-  train_horses, train_zebras, test_horses, test_zebras = get_dataset()
+  train_horses, train_zebras, test_horses, test_zebras = get_dataset(hparams)
 
   num_train_steps = int(tf.data.experimental.cardinality(train_horses))
   num_val_steps = int(tf.data.experimental.cardinality(test_horses))
