@@ -111,10 +111,8 @@ def generator(hparams, output_channels, norm_type='batchnorm',
 def discriminator(hparams, norm_type='batchnorm', name='discriminator'):
   assert norm_type in ['batchnorm', 'instancenorm']
   initializer = tf.random_normal_initializer(0., 0.02)
-
   inp = layers.Input(shape=[None, None, 3], name='input_image')
   x = inp
-
   down1 = downsample(64, 4, norm_type, False)(x)
   down2 = downsample(128, 4, norm_type)(down1)
   down3 = downsample(256, 4, norm_type)(down2)
@@ -123,7 +121,6 @@ def discriminator(hparams, norm_type='batchnorm', name='discriminator'):
   conv = layers.Conv2D(
       512, 4, strides=1, kernel_initializer=initializer,
       use_bias=False)(zero_pad1)
-
   if norm_type == 'batchnorm':
     norm1 = layers.BatchNormalization()(conv)
   else:
@@ -132,5 +129,4 @@ def discriminator(hparams, norm_type='batchnorm', name='discriminator'):
   zero_pad2 = layers.ZeroPadding2D()(leaky_relu)
   last = layers.Conv2D(
       1, 4, strides=1, kernel_initializer=initializer)(zero_pad2)
-
   return tf.keras.Model(inputs=inp, outputs=last, name=name)

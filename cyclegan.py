@@ -124,7 +124,6 @@ def update_dict(dict1, dict2, replace=False):
 
 def downsample(filters, size, norm_type='batchnorm', apply_norm=True):
   initializer = tf.random_normal_initializer(0., 0.02)
-
   result = tf.keras.Sequential()
   result.add(
       tf.keras.layers.Conv2D(
@@ -134,21 +133,17 @@ def downsample(filters, size, norm_type='batchnorm', apply_norm=True):
           padding='same',
           kernel_initializer=initializer,
           use_bias=False))
-
   if apply_norm:
     if norm_type.lower() == 'batchnorm':
       result.add(tf.keras.layers.BatchNormalization())
     elif norm_type.lower() == 'instancenorm':
       result.add(tfa.layers.InstanceNormalization())
-
   result.add(tf.keras.layers.LeakyReLU())
-
   return result
 
 
 def upsample(filters, size, norm_type='batchnorm', apply_dropout=False):
   initializer = tf.random_normal_initializer(0., 0.02)
-
   result = tf.keras.Sequential()
   result.add(
       tf.keras.layers.Conv2DTranspose(
@@ -158,17 +153,13 @@ def upsample(filters, size, norm_type='batchnorm', apply_dropout=False):
           padding='same',
           kernel_initializer=initializer,
           use_bias=False))
-
   if norm_type.lower() == 'batchnorm':
     result.add(tf.keras.layers.BatchNormalization())
   elif norm_type.lower() == 'instancenorm':
     result.add(tfa.layers.InstanceNormalization())
-
   if apply_dropout:
     result.add(tf.keras.layers.Dropout(0.5))
-
   result.add(tf.keras.layers.ReLU())
-
   return result
 
 
