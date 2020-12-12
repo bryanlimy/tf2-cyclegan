@@ -129,8 +129,6 @@ dmypy.json
 .pyre/
 
 runs/
-*.pkl
 .idea/
 *.DS_Store
-oasis/
-elephant/
+dataset/

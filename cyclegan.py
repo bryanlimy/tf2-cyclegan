@@ -51,7 +51,10 @@ def preprocess_image_test(image, label):
 
 def get_dataset(hparams):
   dataset, metadata = tfds.load(
-      'cycle_gan/horse2zebra', with_info=True, as_supervised=True)
+      'cycle_gan/horse2zebra',
+      data_dir='dataset',
+      with_info=True,
+      as_supervised=True)
 
   train_horses, train_zebras = dataset['trainA'], dataset['trainB']
   test_horses, test_zebras = dataset['testA'], dataset['testB']

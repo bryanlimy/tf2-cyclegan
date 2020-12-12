@@ -58,7 +58,10 @@ def cardinality(ds):
 def get_datasets(hparams):
 
   dataset, metadata = tfds.load(
-      'cycle_gan/horse2zebra', with_info=True, as_supervised=True)
+      'cycle_gan/horse2zebra',
+      data_dir='dataset',
+      with_info=True,
+      as_supervised=True)
 
   train_horses, train_zebras = dataset['trainA'], dataset['trainB']
   test_horses, test_zebras = dataset['testA'], dataset['testB']
