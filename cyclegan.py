@@ -12,9 +12,7 @@ from cyclegan.utils import utils
 from cyclegan.utils.summary_helper import Summary
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
-EPOCHS = 200
 BUFFER_SIZE = 1000
-BATCH_SIZE = 14
 LAMBDA = 10
 IMG_WIDTH = 256
 IMG_HEIGHT = 256
@@ -51,7 +49,7 @@ def preprocess_image_test(image, label):
   return image
 
 
-def get_dataset():
+def get_dataset(hparams):
   dataset, metadata = tfds.load(
       'cycle_gan/horse2zebra', with_info=True, as_supervised=True)
 
@@ -59,20 +57,24 @@ def get_dataset():
   test_horses, test_zebras = dataset['testA'], dataset['testB']
 
   train_horses = train_horses.map(
-      preprocess_image_train, num_parallel_calls=AUTOTUNE).cache().shuffle(
-          BUFFER_SIZE).batch(BATCH_SIZE)
+      preprocess_image_train,
+      num_parallel_calls=AUTOTUNE).cache().shuffle(BUFFER_SIZE).batch(
+          hparams.batch_size)
 
   train_zebras = train_zebras.map(
-      preprocess_image_train, num_parallel_calls=AUTOTUNE).cache().shuffle(
-          BUFFER_SIZE).batch(BATCH_SIZE)
+      preprocess_image_train,
+      num_parallel_calls=AUTOTUNE).cache().shuffle(BUFFER_SIZE).batch(
+          hparams.batch_size)
 
   test_horses = test_horses.map(
-      preprocess_image_test, num_parallel_calls=AUTOTUNE).cache().shuffle(
-          BUFFER_SIZE).batch(BATCH_SIZE)
+      preprocess_image_test,
+      num_parallel_calls=AUTOTUNE).cache().shuffle(BUFFER_SIZE).batch(
+          hparams.batch_size)
 
   test_zebras = test_zebras.map(
-      preprocess_image_test, num_parallel_calls=AUTOTUNE).cache().shuffle(
-          BUFFER_SIZE).batch(BATCH_SIZE)
+      preprocess_image_test,
+      num_parallel_calls=AUTOTUNE).cache().shuffle(BUFFER_SIZE).batch(
+          hparams.batch_size)
 
   return train_horses, train_zebras, test_horses, test_zebras
 
@@ -396,8 +398,8 @@ def main(hparams):
 
   summary = Summary(hparams)
 
-  for epoch in range(EPOCHS):
-    print(f'Epoch {epoch+1:03d}/{EPOCHS:03d}')
+  for epoch in range(hparams.epochs):
+    print(f'Epoch {epoch+1:03d}/{hparams.epochs:03d}')
     train_metrics, val_metrics = {}, {}
     start = time.time()
     for image_x, image_y in tqdm(
@@ -447,7 +449,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('--output_dir', default='runs')
   parser.add_argument('--epochs', default=200, type=int)
-  parser.add_argument('--batch_size', default=32, type=int)
+  parser.add_argument('--batch_size', default=14, type=int)
   params = parser.parse_args()
 
   np.random.seed(1234)
