@@ -13,9 +13,12 @@ def get_unet1(hparams, name=''):
   g = generator(
       hparams,
       output_channels=3,
+      norm_type='instancenorm',
       name=utils.get_model_name(name, is_generator=True))
   d = discriminator(
-      hparams, name=utils.get_model_name(name, is_generator=False))
+      hparams,
+      norm_type='instancenorm',
+      name=utils.get_model_name(name, is_generator=False))
   return g, d
 
 
