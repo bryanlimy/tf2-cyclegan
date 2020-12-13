@@ -57,7 +57,8 @@ def upsample(hparams,
 
 
 def generator(hparams, name='generator'):
-  initializer = utils.Initializer(hparams.initializer)
+  # initializer = utils.Initializer(hparams.initializer)
+  initializer = tf.random_normal_initializer(0., 0.02)
 
   inputs = tf.keras.Input(shape=hparams.image_shape, name='inputs')
   outputs = inputs
@@ -106,9 +107,10 @@ def generator(hparams, name='generator'):
 
 
 def discriminator(hparams, name='discriminator'):
-  inputs = tf.keras.Input(hparams.image_shape, name='signals')
+  # initializer = utils.Initializer(hparams.initializer)
+  initializer = tf.random_normal_initializer(0., 0.02)
 
-  initializer = utils.Initializer(hparams.initializer)
+  inputs = tf.keras.Input(hparams.image_shape, name='signals')
 
   outputs = downsample(
       hparams, 64, 4, apply_norm=False, initializer=initializer)(inputs)
