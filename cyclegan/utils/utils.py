@@ -15,11 +15,7 @@ def save_models(hparams, G, F, X, Y):
 
 
 def plot_transformation(x, y, gan, summary, epoch):
-  fake_y = gan.G(x, training=False)
-  cycled_x = gan.F(fake_y, training=False)
-
-  fake_x = gan.F(y, training=False)
-  cycled_y = gan.G(fake_x, training=False)
+  fake_x, fake_y, cycled_x, cycled_y = gan.cycle_step(x, y, training=False)
 
   # plot the first 3 transformations
   for i in range(3):

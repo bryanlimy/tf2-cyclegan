@@ -55,22 +55,16 @@ class GAN:
     # x -> fake y -> cycled x
     fake_y = self.G(x, training=training)
     cycled_x = self.F(fake_y, training=training)
-
     # y -> fake x -> cycled y
     fake_x = self.F(y, training=training)
     cycled_y = self.G(fake_x, training=training)
-
     return fake_x, fake_y, cycled_x, cycled_y
 
   @tf.function
   def train(self, x, y):
     result = {}
     with tf.GradientTape(persistent=True) as tape:
-      fake_y = self.G(x, training=True)
-      cycled_x = self.F(fake_y, training=True)
-
-      fake_x = self.F(y, training=True)
-      cycled_y = self.G(fake_x, training=True)
+      fake_x, fake_y, cycled_x, cycled_y = self.cycle_step(x, y, training=True)
 
       discriminate_x = self.X(x, training=True)
       discriminate_y = self.Y(y, training=True)
@@ -119,11 +113,7 @@ class GAN:
 
   @tf.function
   def validate(self, x, y):
-    fake_y = self.G(x, training=False)
-    cycled_x = self.F(fake_y, training=False)
-
-    fake_x = self.F(y, training=False)
-    cycled_y = self.G(fake_x, training=False)
+    fake_x, fake_y, cycled_x, cycled_y = gan.cycle_step(x, y, training=False)
 
     same_y = self.G(y, training=False)
     same_x = self.F(x, training=False)
