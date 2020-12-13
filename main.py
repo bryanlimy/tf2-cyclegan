@@ -100,7 +100,7 @@ if __name__ == '__main__':
       '--normalizer',
       default='instance_norm',
       choices=[None, 'layer_norm', 'batch_norm', 'instance_norm'])
-  parser.add_argument('--initializer', default='glorot_uniform', type=str)
+  parser.add_argument('--initializer', default='glorot_normal', type=str)
   parser.add_argument(
       '--alpha', default=10., type=float, help='cycle loss coefficient')
   parser.add_argument(
