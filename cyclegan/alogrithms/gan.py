@@ -113,7 +113,7 @@ class GAN:
 
   @tf.function
   def validate(self, x, y):
-    fake_x, fake_y, cycled_x, cycled_y = gan.cycle_step(x, y, training=False)
+    fake_x, fake_y, cycled_x, cycled_y = self.cycle_step(x, y, training=False)
 
     same_y = self.G(y, training=False)
     same_x = self.F(x, training=False)
