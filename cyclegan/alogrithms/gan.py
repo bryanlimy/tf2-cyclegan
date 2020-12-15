@@ -19,10 +19,10 @@ class GAN:
     self.X = X
     self.Y = Y
 
-    self.G_optimizer = Optimizer(hparams)
-    self.F_optimizer = Optimizer(hparams)
-    self.X_optimizer = Optimizer(hparams)
-    self.Y_optimizer = Optimizer(hparams)
+    self.G_optimizer = Optimizer(hparams, self.G)
+    self.F_optimizer = Optimizer(hparams, self.F)
+    self.X_optimizer = Optimizer(hparams, self.X)
+    self.Y_optimizer = Optimizer(hparams, self.Y)
 
     self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
@@ -104,10 +104,10 @@ class GAN:
         X_loss = self.X_optimizer.get_scaled_loss(X_loss)
         Y_loss = self.Y_optimizer.get_scaled_loss(Y_loss)
 
-    self.G_optimizer.update(self.G, G_loss, tape)
-    self.F_optimizer.update(self.F, F_loss, tape)
-    self.X_optimizer.update(self.X, X_loss, tape)
-    self.Y_optimizer.update(self.Y, Y_loss, tape)
+    self.G_optimizer.minimize(G_loss, tape)
+    self.F_optimizer.minimize(F_loss, tape)
+    self.X_optimizer.minimize(X_loss, tape)
+    self.Y_optimizer.minimize(Y_loss, tape)
 
     return result
 

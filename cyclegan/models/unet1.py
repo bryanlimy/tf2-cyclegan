@@ -116,7 +116,7 @@ def discriminator(hparams, norm_type='batchnorm', name='discriminator'):
   initializer = tf.random_normal_initializer(0., 0.02)
   inp = layers.Input(shape=[None, None, 3], name='input_image')
   x = inp
-  down1 = downsample(64, 4, norm_type, False)(x)
+  down1 = downsample(64, 4, norm_type, apply_norm=False)(x)
   down2 = downsample(128, 4, norm_type)(down1)
   down3 = downsample(256, 4, norm_type)(down2)
 

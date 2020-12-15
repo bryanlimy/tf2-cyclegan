@@ -5,23 +5,12 @@ from tqdm import tqdm
 from time import time
 import tensorflow as tf
 from shutil import rmtree
-from tensorflow.keras.mixed_precision import experimental as mixed_precision
 
 from cyclegan.utils import utils
 from cyclegan.models.registry import get_models
 from cyclegan.utils.summary_helper import Summary
 from cyclegan.alogrithms.registry import get_algorithm
 from cyclegan.utils.dataset_helper import get_datasets
-
-
-def set_precision_policy(hparams):
-  policy = mixed_precision.Policy('mixed_float16' if hparams.
-                                  mixed_precision else 'float32')
-  mixed_precision.set_policy(policy)
-  if hparams.verbose:
-    print(f'\nCompute dtype: {policy.compute_dtype}\n'
-          f'Variable dtype: {policy.variable_dtype}\n')
-  return policy
 
 
 def train(hparams, x_ds, y_ds, gan, summary, epoch):
@@ -57,7 +46,8 @@ def main(hparams):
 
   tf.keras.backend.clear_session()
 
-  set_precision_policy(hparams)
+  if hparams.mixed_precision:
+    tf.keras.mixed_precision.set_global_policy('mixed_float16')
 
   summary = Summary(hparams)
   x_train, x_validation, y_train, y_validation = get_datasets(hparams)
