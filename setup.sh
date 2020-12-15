@@ -20,7 +20,7 @@ check_requirements() {
 }
 
 install_packages() {
-  printf "\nInstalling tensorflow..."
+  printf "\nInstalling tensorflow..\n"
   if [ $macOS = "true" ]; then
     pip install -q tensorflow==2.4.0
   else
