@@ -65,7 +65,9 @@ def main(hparams):
     train(hparams, x_train, y_train, gan, summary, epoch)
     metrics = validate(hparams, x_validation, y_validation, gan, summary, epoch)
     end = time()
+
     summary.scalar('elapse', end - start, step=epoch)
+    gan.log_loss_scale(summary, epoch)
 
     print(f'MSE(X, F(G(X))): {metrics["MSE(X, F(G(X)))"]:.04f}\t\t'
           f'MSE(X, F(X)): {metrics["MSE(Y, G(F(Y)))"]:.04f}\n'

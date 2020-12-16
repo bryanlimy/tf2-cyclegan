@@ -11,8 +11,8 @@ class GAN:
 
   def __init__(self, hparams, G, F, X, Y):
     """ 
-      G(x): x -> y
-      F(y): y -> x
+    G(x): x -> y
+    F(y): y -> x
     """
     self.G = G
     self.F = F
@@ -31,6 +31,16 @@ class GAN:
 
     self.mixed_precision = hparams.mixed_precision
     self.error_function = utils.get_error_function(hparams.error)
+
+  def log_loss_scale(self, summary, epoch):
+    summary.scalar(
+        'optimizer/G_loss_scale', self.G_optimizer.loss_scale, step=epoch)
+    summary.scalar(
+        'optimizer/F_loss_scale', self.F_optimizer.loss_scale, step=epoch)
+    summary.scalar(
+        'optimizer/X_loss_scale', self.X_optimizer.loss_scale, step=epoch)
+    summary.scalar(
+        'optimizer/Y_loss_scale', self.Y_optimizer.loss_scale, step=epoch)
 
   def generator_loss(self, discriminate_fake):
     return self.cross_entropy(

@@ -11,6 +11,10 @@ class Optimizer:
       self.optimizer = mixed_precision.LossScaleOptimizer(
           self.optimizer, dynamic=True)
 
+  @property
+  def loss_scale(self):
+    return self.optimizer.loss_scale if self.mixed_precision else 0.
+
   def get_scaled_loss(self, loss):
     return self.optimizer.get_scaled_loss(loss)
 
