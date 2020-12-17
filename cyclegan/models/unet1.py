@@ -108,28 +108,41 @@ def generator(hparams, output_channels, norm_type='batchnorm',
       kernel_initializer=initializer,
       activation='tanh')(outputs)
 
+  if hparams.mixed_precision:
+    outputs = layers.Activation('linear', dtype=tf.float32)(outputs)
+
   return tf.keras.Model(inputs=inputs, outputs=outputs, name=name)
 
 
 def discriminator(hparams, norm_type='batchnorm', name='discriminator'):
   assert norm_type in ['batchnorm', 'instancenorm']
   initializer = tf.random_normal_initializer(0., 0.02)
-  inp = layers.Input(shape=[None, None, 3], name='input_image')
-  x = inp
-  down1 = downsample(64, 4, norm_type, apply_norm=False)(x)
-  down2 = downsample(128, 4, norm_type)(down1)
-  down3 = downsample(256, 4, norm_type)(down2)
+  inputs = layers.Input(shape=[None, None, 3], name='input_image')
 
-  zero_pad1 = layers.ZeroPadding2D()(down3)
-  conv = layers.Conv2D(
-      512, 4, strides=1, kernel_initializer=initializer,
-      use_bias=False)(zero_pad1)
+  outputs = downsample(64, 4, norm_type, apply_norm=False)(inputs)
+  outputs = downsample(128, 4, norm_type)(outputs)
+  outputs = downsample(256, 4, norm_type)(outputs)
+
+  outputs = layers.ZeroPadding2D()(outputs)
+  outputs = layers.Conv2D(
+      512,
+      4,
+      strides=1,
+      kernel_initializer=initializer,
+      use_bias=False,
+  )(outputs)
   if norm_type == 'batchnorm':
-    norm1 = layers.BatchNormalization()(conv)
+    outputs = layers.BatchNormalization()(outputs)
   else:
-    norm1 = tfa.layers.InstanceNormalization()(conv)
-  leaky_relu = layers.LeakyReLU()(norm1)
-  zero_pad2 = layers.ZeroPadding2D()(leaky_relu)
-  last = layers.Conv2D(
-      1, 4, strides=1, kernel_initializer=initializer)(zero_pad2)
-  return tf.keras.Model(inputs=inp, outputs=last, name=name)
+    outputs = tfa.layers.InstanceNormalization()(outputs)
+  outputs = layers.LeakyReLU()(outputs)
+  outputs = layers.ZeroPadding2D()(outputs)
+  outputs = layers.Conv2D(
+      filters=1,
+      kernel_size=4,
+      strides=1,
+      kernel_initializer=initializer,
+  )(outputs)
+  if hparams.mixed_precision:
+    outputs = layers.Activation('linear', dtype=tf.float32)(outputs)
+  return tf.keras.Model(inputs=inputs, outputs=outputs, name=name)
