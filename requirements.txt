@@ -1,7 +1,6 @@
-tqdm
-yapf
-sklearn
-seaborn
-matplotlib
-tensorflow_datasets==4.1.0
-tensorflow_addons
+tqdm==4.56.2
+yapf==0.30.0
+matplotlib==3.3.4
+tensorflow==2.4.1
+tensorflow_addons==0.13.0
+tensorflow_datasets==4.2.0

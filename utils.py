@@ -1,6 +1,8 @@
-import os
 import io
+import os
 import platform
+import typing as t
+import numpy as np
 import tensorflow as tf
 
 import matplotlib
@@ -17,26 +19,14 @@ class Summary(object):
   evaluation
   """
 
-  def __init__(self, hparams):
-    self._hparams = hparams
-
-    self.train_writer = tf.summary.create_file_writer(hparams.output_dir)
+  def __init__(self, output_dir: str):
+    self.train_writer = tf.summary.create_file_writer(output_dir)
     self.val_writer = tf.summary.create_file_writer(
-        os.path.join(os.path.join(hparams.output_dir, 'validation')))
-
-    tick_size = 12
-    legend_size = 12
-    label_size = 14
-    plt.rc('xtick', labelsize=tick_size)
-    plt.rc('ytick', labelsize=tick_size)
-    plt.rc('axes', titlesize=label_size)
-    plt.rc('axes', labelsize=label_size)
-    plt.rc('legend', fontsize=legend_size)
+        os.path.join(output_dir, 'validation'))
 
     self.dpi = 100
-    self.framerate = 24
 
-  def _get_writer(self, training):
+  def _get_writer(self, training: bool):
     return self.train_writer if training else self.val_writer
 
   def _plot_to_png(self):
@@ -50,7 +40,11 @@ class Summary(object):
     buffer.seek(0)
     return tf.image.decode_png(buffer.getvalue(), channels=4)
 
-  def scalar(self, tag, value, step=0, training=True):
+  def scalar(self,
+             tag: str,
+             value: t.Union[np.ndarray, tf.Tensor],
+             step: int = 0,
+             training: bool = True):
     writer = self._get_writer(training)
     with writer.as_default():
       tf.summary.scalar(tag, value, step=step)
@@ -91,3 +85,14 @@ class Summary(object):
     image = self._plot_to_png()
     plt.close()
     self.image(tag, values=[image], step=step, training=training)
+
+
+def append_dict(dict1: dict, dict2: dict, replace: bool = False):
+  """ append items in dict2 to dict1 """
+  for key, value in dict2.items():
+    if replace:
+      dict1[key] = value
+    else:
+      if key not in dict1:
+        dict1[key] = []
+      dict1[key].append(value)
