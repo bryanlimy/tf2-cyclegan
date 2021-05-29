@@ -216,7 +216,7 @@ class CycleGAN:
 
   def train_step(self, x, y):
     result = {}
-    with tf.GradientTape(presistent=True) as tape:
+    with tf.GradientTape(persistent=True) as tape:
       fake_y = self.G(x, training=True)
       fake_x = self.F(y, training=True)
 
