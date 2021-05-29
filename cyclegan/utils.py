@@ -8,20 +8,19 @@ import tensorflow as tf
 import matplotlib
 if platform.system() == 'Darwin':
   matplotlib.use('TkAgg')
-
 import matplotlib.pyplot as plt
 
 
 class Summary:
   """ Helper class to write TensorBoard summaries """
 
-  def __init__(self, args, analysis: bool = False):
+  def __init__(self, output_dir: str):
     self.dpi = 120
     plt.style.use('seaborn-deep')
 
     self.writers = [
-        tf.summary.create_file_writer(args.output_dir),
-        tf.summary.create_file_writer(os.path.join(args.output_dir, 'test'))
+        tf.summary.create_file_writer(output_dir),
+        tf.summary.create_file_writer(os.path.join(output_dir, 'test'))
     ]
 
   def get_writer(self, training: bool):
