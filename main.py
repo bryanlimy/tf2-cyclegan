@@ -53,30 +53,32 @@ def get_datasets(
     image = normalize_image(image)
     return image
 
+  train_horses = train_horses.take(num_train_samples)
   train_horses = train_horses.map(preprocess_train, num_parallel_calls=AUTOTUNE)
   train_horses = train_horses.cache()
   train_horses = train_horses.shuffle(buffer_size)
-  train_horses = train_horses.batch(args.batch_size)
 
+  train_zebras = train_zebras.take(num_train_samples)
   train_zebras = train_zebras.map(preprocess_train, num_parallel_calls=AUTOTUNE)
   train_zebras = train_zebras.cache()
   train_zebras = train_zebras.shuffle(buffer_size)
-  train_zebras = train_zebras.batch(args.batch_size)
 
+  test_horses = test_horses.take(num_test_samples)
   test_horses = test_horses.map(preprocess_test, num_parallel_calls=AUTOTUNE)
   test_horses = test_horses.cache()
-  sample_horses = test_horses.take(5).batch(1)
-  test_horses = test_horses.batch(args.batch_size)
 
+  test_zebras = test_zebras.take(num_test_samples)
   test_zebras = test_zebras.map(preprocess_test, num_parallel_calls=AUTOTUNE)
   test_zebras = test_zebras.cache()
-  sample_zebras = test_zebras.take(5).batch(1)
-  test_zebras = test_zebras.batch(args.batch_size)
 
-  train_ds = tf.data.Dataset.zip((train_horses, train_zebras))
-  test_ds = tf.data.Dataset.zip((test_horses, test_zebras))
+  train_ds = tf.data.Dataset.zip(
+      (train_horses.batch(args.batch_size),
+       train_zebras.batch(args.batch_size))).prefetch(AUTOTUNE)
+  test_ds = tf.data.Dataset.zip(
+      (test_horses.batch(args.batch_size), test_zebras.batch(args.batch_size)))
   # take 5 samples from the test set for plotting
-  sample_ds = tf.data.Dataset.zip((sample_horses, sample_zebras))
+  sample_ds = tf.data.Dataset.zip(
+      (test_horses.take(5).batch(1), test_zebras.take(5).batch(1)))
 
   # create distributed datasets
   train_ds = strategy.experimental_distribute_dataset(train_ds)
