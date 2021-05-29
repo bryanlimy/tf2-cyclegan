@@ -135,7 +135,7 @@ def get_generator(input_shape: tuple,
                   name: str = 'generator'):
   inputs = layers.Input(shape=input_shape, name='inputs')
 
-  outputs = ReflectionPadding2D(padding=(3, 3))(inputs)
+  outputs = ReflectionPadding2D(paddings=(3, 3))(inputs)
   outputs = layers.Conv2D(filters=filters,
                           kernel_size=(7, 7),
                           kernel_initializer=kernel_init,
