@@ -77,14 +77,14 @@ def get_datasets(
   test_ds = tf.data.Dataset.zip((test_horses.batch(args.global_batch_size),
                                  test_zebras.batch(args.global_batch_size)))
   # take 5 samples from the test set for plotting
-  sample_ds = tf.data.Dataset.zip(
+  plot_ds = tf.data.Dataset.zip(
       (test_horses.take(5).batch(1), test_zebras.take(5).batch(1)))
 
   # create distributed datasets
   train_ds = strategy.experimental_distribute_dataset(train_ds)
   test_ds = strategy.experimental_distribute_dataset(test_ds)
 
-  return train_ds, test_ds, sample_ds
+  return train_ds, test_ds, plot_ds
 
 
 def MAE(y_true, y_pred):
@@ -384,7 +384,7 @@ def main(args):
   args.global_batch_size = num_devices * args.batch_size
   print(f'Number of devices: {num_devices}')
 
-  train_ds, test_ds, sample_ds = get_datasets(args, strategy=strategy)
+  train_ds, test_ds, plot_ds = get_datasets(args, strategy=strategy)
 
   gan = CycleGAN(args, strategy=strategy)
 
@@ -409,7 +409,7 @@ def main(args):
 
     if epoch % 10 == 0 or epoch == args.epochs - 1:
       gan.save_checkpoint(epoch)
-      utils.plot_cycle(sample_ds, gan, summary, epoch)
+      utils.plot_cycle(plot_ds, gan, summary, epoch)
 
 
 if __name__ == '__main__':

@@ -109,9 +109,9 @@ def append_dict(dict1: dict, dict2: dict, replace: bool = False):
       dict1[key].append(value)
 
 
-def plot_cycle(sample_ds, gan, summary, epoch: int):
+def plot_cycle(plot_ds, gan, summary, epoch: int):
   samples = {}
-  for x, y in sample_ds:
+  for x, y in plot_ds:
     fake_x, fake_y, cycle_x, cycle_y = gan.cycle_step(x, y, training=False)
     append_dict(dict1=samples,
                 dict2={
