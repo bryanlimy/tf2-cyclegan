@@ -401,10 +401,10 @@ def main(args):
     end = time()
     summary.scalar('elapse', end - start, step=epoch)
 
-    print(f'MAE(X, F(G(X))): {metrics["error/MAE(X, F(G(X)))"]:.04f}\t\t'
-          f'MAE(X, F(X)): {metrics["error/MAE(Y, G(F(Y)))"]:.04f}\n'
-          f'MAE(Y, G(F(Y))): {metrics["error/MAE(X, F(X))"]:.04f}\t\t'
-          f'MAE(Y, G(Y)): {metrics["error/MAE(Y, G(Y))"]:.04f}\n'
+    print(f'MAE(X, F(G(X))): {results["error/MAE(X, F(G(X)))"]:.04f}\t\t'
+          f'MAE(X, F(X)): {results["error/MAE(Y, G(F(Y)))"]:.04f}\n'
+          f'MAE(Y, G(F(Y))): {results["error/MAE(X, F(X))"]:.04f}\t\t'
+          f'MAE(Y, G(Y)): {results["error/MAE(Y, G(Y))"]:.04f}\n'
           f'Elapse: {end - start:.02f}s\n')
 
     if epoch % 10 == 0 or epoch == args.epochs - 1:
