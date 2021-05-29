@@ -11,7 +11,7 @@ import tensorflow as tf
 from shutil import rmtree
 import tensorflow_datasets as tfds
 
-from src import utils, model
+from cyclegan import utils, model
 
 AUTOTUNE = tf.data.AUTOTUNE
 IMAGE_SHAPE = (286, 286)
@@ -65,20 +65,24 @@ def get_datasets(
 
   test_horses = test_horses.map(preprocess_test, num_parallel_calls=AUTOTUNE)
   test_horses = test_horses.cache()
+  sample_horses = test_horses.take(5)
   test_horses = test_horses.batch(args.batch_size)
 
   test_zebras = test_zebras.map(preprocess_test, num_parallel_calls=AUTOTUNE)
   test_zebras = test_zebras.cache()
+  sample_zebras = test_zebras.take(5)
   test_zebras = test_zebras.batch(args.batch_size)
 
   train_ds = tf.data.Dataset.zip((train_horses, train_zebras))
   test_ds = tf.data.Dataset.zip((test_horses, test_zebras))
+  # take 5 samples from the test set for plotting
+  sample_ds = tf.data.Dataset.zip((sample_horses, sample_zebras))
 
   # create distributed datasets
   train_ds = strategy.experimental_distribute_dataset(train_ds)
   test_ds = strategy.experimental_distribute_dataset(test_ds)
 
-  return train_ds, test_ds
+  return train_ds, test_ds, sample_ds
 
 
 def MAE(y_true, y_pred):
@@ -142,15 +146,14 @@ class CycleGAN:
                                                   beta_2=0.9)
 
       # initialize checkpoint
-      self.checkpoint = tf.train.Checkpoint(
-          G=self.G,
-          F=self.F,
-          X=self.X,
-          Y=self.Y,
-          G_optimizer=self.G_optimizer.optimizer,
-          F_optimizer=self.F_optimizer.optimizer,
-          X_optimizer=self.X_optimizer.optimizer,
-          Y_optimizer=self.Y_optimizer.optimizer)
+      self.checkpoint = tf.train.Checkpoint(G=self.G,
+                                            F=self.F,
+                                            X=self.X,
+                                            Y=self.Y,
+                                            G_optimizer=self.G_optimizer,
+                                            F_optimizer=self.F_optimizer,
+                                            X_optimizer=self.X_optimizer,
+                                            Y_optimizer=self.Y_optimizer)
 
   def save_checkpoint(self, epoch: int):
     """ save checkpoint to checkpoint_dir """
@@ -379,7 +382,7 @@ def main(args):
   args.global_batch_size = num_devices * args.batch_size
   print(f'Number of devices: {num_devices}')
 
-  train_ds, test_ds = get_datasets(args, strategy=strategy)
+  train_ds, test_ds, sample_ds = get_datasets(args, strategy=strategy)
 
   gan = CycleGAN(args, strategy=strategy)
 
@@ -404,6 +407,7 @@ def main(args):
 
     if epoch % 10 == 0 or epoch == args.epochs - 1:
       gan.save_checkpoint(epoch)
+      utils.plot_cycle(sample_ds, gan, summary, epoch)
 
 
 if __name__ == '__main__':
