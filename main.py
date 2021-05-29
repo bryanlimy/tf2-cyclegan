@@ -365,7 +365,7 @@ def test(args, test_ds, gan, summary, epoch: int):
 def main(args):
   if args.clear_output_dir and os.path.exists(args.output_dir):
     rmtree(args.output_dir)
-  if os.path.exists(args.output_dir):
+  if not os.path.exists(args.output_dir):
     os.makedirs(args.output_dir)
 
   tf.keras.backend.clear_session()
