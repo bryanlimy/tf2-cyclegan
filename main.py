@@ -65,12 +65,12 @@ def get_datasets(
 
   test_horses = test_horses.map(preprocess_test, num_parallel_calls=AUTOTUNE)
   test_horses = test_horses.cache()
-  sample_horses = test_horses.take(5)
+  sample_horses = test_horses.take(5).batch(1)
   test_horses = test_horses.batch(args.batch_size)
 
   test_zebras = test_zebras.map(preprocess_test, num_parallel_calls=AUTOTUNE)
   test_zebras = test_zebras.cache()
-  sample_zebras = test_zebras.take(5)
+  sample_zebras = test_zebras.take(5).batch(1)
   test_zebras = test_zebras.batch(args.batch_size)
 
   train_ds = tf.data.Dataset.zip((train_horses, train_zebras))
