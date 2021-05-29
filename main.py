@@ -11,7 +11,7 @@ import tensorflow as tf
 from shutil import rmtree
 import tensorflow_datasets as tfds
 
-import utils, model
+from src import utils, model
 
 AUTOTUNE = tf.data.AUTOTUNE
 IMAGE_SHAPE = (286, 286)
@@ -365,7 +365,8 @@ def test(args, test_ds, gan, summary, epoch: int):
 def main(args):
   if args.clear_output_dir and os.path.exists(args.output_dir):
     rmtree(args.output_dir)
-  os.makedirs(args.output_dir)
+  if os.path.exists(args.output_dir):
+    os.makedirs(args.output_dir)
 
   tf.keras.backend.clear_session()
 
