@@ -72,10 +72,10 @@ def get_datasets(
   test_zebras = test_zebras.cache()
 
   train_ds = tf.data.Dataset.zip(
-      (train_horses.batch(args.batch_size),
-       train_zebras.batch(args.batch_size))).prefetch(AUTOTUNE)
-  test_ds = tf.data.Dataset.zip(
-      (test_horses.batch(args.batch_size), test_zebras.batch(args.batch_size)))
+      (train_horses.batch(args.global_batch_size),
+       train_zebras.batch(args.global_batch_size))).prefetch(AUTOTUNE)
+  test_ds = tf.data.Dataset.zip((test_horses.batch(args.global_batch_size),
+                                 test_zebras.batch(args.global_batch_size)))
   # take 5 samples from the test set for plotting
   sample_ds = tf.data.Dataset.zip(
       (test_horses.take(5).batch(1), test_zebras.take(5).batch(1)))
