@@ -18,10 +18,9 @@ IMAGE_SHAPE = (286, 286)
 INPUT_SHAPE = (256, 256, 3)
 
 
-def get_datasets(
-    args,
-    strategy: tf.distribute.Strategy,
-    buffer_size: int = 256) -> t.Tuple[tf.data.Dataset, tf.data.Dataset]:
+def get_datasets(args,
+                 strategy: tf.distribute.Strategy,
+                 buffer_size: int = 256):
   """ Load and return preprocessed and distributed horse2zebra dataset """
   dataset, metadata = tfds.load("cycle_gan/horse2zebra",
                                 with_info=True,
@@ -161,7 +160,7 @@ class CycleGAN:
     """ save checkpoint to checkpoint_dir """
     file_prefix = os.path.join(self.checkpoint_dir, f'epoch-{epoch:03d}')
     self.checkpoint.write(file_prefix)
-    print(f'saved checkpoint to {file_prefix}')
+    print(f'\nsaved checkpoint to {file_prefix}\n')
 
   def load_checkpoint(self, expect_partial: bool = False):
     """
@@ -178,7 +177,7 @@ class CycleGAN:
       # get checkpoint epoch
       matches = re.match(r"epoch-(\d{3}).", os.path.basename(last_checkpoint))
       epoch = int(matches.groups()[0])
-      print(f'loaded checkpoint from {last_checkpoint}')
+      print(f'\nloaded checkpoint from {last_checkpoint}\n')
     return epoch
 
   def reduce_mean(self, inputs):
