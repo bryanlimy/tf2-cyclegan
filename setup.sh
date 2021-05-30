@@ -23,7 +23,7 @@ check_requirements() {
 install_packages() {
   printf '\nInstalling required libraries...\n'
   if [ "$macOS" = "false" ]; then
-    conda install -c nvidia cudatoolkit cudnn nccl -y
+    conda install -c nvidia cudatoolkit=11.1 cudnn nccl -y
   fi
   pip install -r requirements.txt
 }
