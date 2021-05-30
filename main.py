@@ -1,11 +1,8 @@
 import os
-import re
 import argparse
-import typing as t
 import numpy as np
 from math import ceil
 from tqdm import tqdm
-from glob import glob
 from time import time
 import tensorflow as tf
 from shutil import rmtree
@@ -124,6 +121,7 @@ class CycleGAN:
     self.checkpoint_dir = os.path.join(args.output_dir, 'checkpoints')
     if not os.path.exists(self.checkpoint_dir):
       os.makedirs(self.checkpoint_dir)
+    self.checkpoint_prefix = os.path.join(self.checkpoint_dir, 'checkpoint')
 
     with self.strategy.scope():
       # initialize models
@@ -156,29 +154,19 @@ class CycleGAN:
                                             X_optimizer=self.X_optimizer,
                                             Y_optimizer=self.Y_optimizer)
 
-  def save_checkpoint(self, epoch: int):
-    """ save checkpoint to checkpoint_dir """
-    file_prefix = os.path.join(self.checkpoint_dir, f'epoch-{epoch:03d}')
-    self.checkpoint.write(file_prefix)
-    print(f'\nsaved checkpoint to {file_prefix}\n')
+  def save_checkpoint(self):
+    """ save checkpoint to checkpoint_dir, overwrite if exists """
+    self.checkpoint.write(self.checkpoint_prefix)
+    print(f'\nsaved checkpoint to {self.checkpoint_prefix}\n')
 
   def load_checkpoint(self, expect_partial: bool = False):
-    """
-    load latest checkpoint from checkpoint_dir and return checkpoint epoch
-    """
-    epoch = -1
-    checkpoints = glob(os.path.join(self.checkpoint_dir, 'epoch-*'))
-    if checkpoints:
-      last_checkpoint = sorted(checkpoints)[-1]
+    """ load checkpoint from checkpoint_dir if exists """
+    if os.path.exists(f'{os.path.join(self.checkpoint_prefix)}.index'):
       if expect_partial:
-        self.checkpoint.read(last_checkpoint).expected_partial()
+        self.checkpoint.read(self.checkpoint_prefix).expected_partial()
       else:
-        self.checkpoint.read(last_checkpoint)
-      # get checkpoint epoch
-      matches = re.match(r"epoch-(\d{3}).", os.path.basename(last_checkpoint))
-      epoch = int(matches.groups()[0])
-      print(f'\nloaded checkpoint from {last_checkpoint}\n')
-    return epoch
+        self.checkpoint.read(self.checkpoint_prefix)
+      print(f'\nloaded checkpoint from {self.checkpoint_prefix}\n')
 
   def reduce_mean(self, inputs):
     """ return inputs mean with respect to the global_batch_size """
@@ -383,15 +371,15 @@ def main(args):
   args.global_batch_size = num_devices * args.batch_size
   print(f'Number of devices: {num_devices}')
 
-  train_ds, test_ds, plot_ds = get_datasets(args, strategy=strategy)
-
-  gan = CycleGAN(args, strategy=strategy)
-
   # initialize TensorBoard summary helper
   summary = utils.Summary(args.output_dir)
 
-  epoch = gan.load_checkpoint()
-  while (epoch := epoch + 1) < args.epochs:
+  train_ds, test_ds, plot_ds = get_datasets(args, strategy=strategy)
+
+  gan = CycleGAN(args, strategy=strategy)
+  gan.load_checkpoint()
+
+  for epoch in range(args.epochs):
     print(f'Epoch {epoch + 1:03d}/{args.epochs:03d}')
 
     start = time()
@@ -407,7 +395,7 @@ def main(args):
           f'Elapse: {end - start:.02f}s\n')
 
     if epoch % 10 == 0 or epoch == args.epochs - 1:
-      gan.save_checkpoint(epoch)
+      gan.save_checkpoint()
       utils.plot_cycle(plot_ds, gan, summary, epoch)
 
 
