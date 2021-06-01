@@ -1,9 +1,9 @@
 # Distributed custom training loops in TensorFlow 2
 This repository provide a concise example on how to use `tf.distribute.MirroredStrategy` with custom training loops in TensorFlow 2. We adapt the CycleGAN ([Zhu et. al. 2017](https://arxiv.org/pdf/1703.10593.pdf)) tutorials from [Keras](https://keras.io/examples/generative/cyclegan) and [TensorFlow](https://www.tensorflow.org/tutorials/generative/cyclegan) and train the model with multiple GPUs. See [medium.com/@bryanlimy/distributed-custom-training-loops-in-tensorflow-2](https://medium.com/@bryanlimy/distributed-custom-training-loops-in-tensorflow-2) for a detailed tutorial.
 
-horse -> zebra -> horse    |  zebra -> horse -> zebra
-:-------------------------:|:-------------------------:
-![](images/x_cycle.png)    |  ![](images/y_cycle.png)
+|  horse → zebra → horse  |  zebra → horse → zebra  |
+| :---------------------: | :---------------------: |
+| ![](images/x_cycle.png) | ![](images/y_cycle.png) |
 
 ## 1. Setup
 - create virtual environment for the project
