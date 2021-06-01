@@ -21,15 +21,11 @@ check_requirements() {
 }
 
 install_packages() {
-  printf '\nInstalling tensorflow...\n'
-  if [ "$macOS" = "true" ]; then
-    pip install -q tensorflow==2.3.1
-  else
-    conda install -q cudatoolkit=10.1 cudnn=7.6 cupti=10.1 numpy blas scipy -y
-    pip install -q tensorflow==2.3.1
+  printf '\nInstalling required libraries...\n'
+  if [ "$macOS" = "false" ]; then
+    conda install -c nvidia cudatoolkit=11.0 cudnn=8.0 nccl -y
   fi
-  printf '\nInstalling other Python packages...\n'
-  pip install -q -r requirements.txt
+  pip install -r requirements.txt
 }
 
 check_requirements

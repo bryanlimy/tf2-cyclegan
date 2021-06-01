@@ -1,18 +1,14 @@
-## TensorFlow 2 implementation of CycleGAN with WGAN-GP
-This repository implements CycleGAN ([Zhu et. al. 2017](https://arxiv.org/pdf/1703.10593.pdf)) using TensorFlow 2 with code modularity in mind. The following is a list of features that this codebase introduces:
+# Distributed custom training loops in TensorFlow 2
+This repository provide a concise example on how to use `tf.distribute.MirroredStrategy` with custom training loops in TensorFlow 2. We adapt the CycleGAN ([Zhu et. al. 2017](https://arxiv.org/pdf/1703.10593.pdf)) tutorials from [Keras](https://keras.io/examples/generative/cyclegan) and [TensorFlow](https://www.tensorflow.org/tutorials/generative/cyclegan) and train the model with multiple GPUs. See [medium.com/@bryanlimy/distributed-custom-training-loops-in-tensorflow-2](https://medium.com/@bryanlimy/distributed-custom-training-loops-in-tensorflow-2) for a detailed tutorial.
 
-- WGAN-GP ([Gulrajani et. al. 2017](https://arxiv.org/pdf/1704.00028.pdf)) formulation using the flag `--algorithm wgan_gp` .
-- [mixed-precision](https://www.tensorflow.org/guide/mixed_precision) training using the flag `--mixed_precision`.
-- modularity
-    - define different model architectures under `cyclegan/models` and use them by `--model unet`.
-    - define different objective functions under `cyclegan/algorithms` and use them by `--algorithm gan`.
-    - different error function to calculate cycle loss and identity loss with `--cycle_error mse`.
-- `tf.summary` to log and monitor model performance.
+|  horse → zebra → horse  |  zebra → horse → zebra  |
+| :---------------------: | :---------------------: |
+| ![](images/x_cycle.png) | ![](images/y_cycle.png) |
 
-### 1. Installation
+## 1. Setup
 - create virtual environment for the project
   ```
-  conda create -n cyclegan python=3.6
+  conda create -n cyclegan python=3.8
   ```
 - activate virtual environment
   ```
@@ -23,17 +19,19 @@ This repository implements CycleGAN ([Zhu et. al. 2017](https://arxiv.org/pdf/17
   sh setup.sh
   ```
 
-### 2. Run codebase
-- Use `--help` to see all available flags.
-- By default, we train our model using the `horse2zebra` dataset from [TensorFlow Datasets](https://www.tensorflow.org/datasets/catalog/cycle_gan#cycle_ganhorse2zebra).
-- The training logs and checkpoints are stored in `--output_dir`
-- To train our model in mixed-precision with the UNet architecture and WGAN-GP formulation, we can use the following command
+## 2. Run
+- We use the  `horse2zebra` dataset from [TensorFlow Datasets](https://www.tensorflow.org/datasets/catalog/cycle_gan#cycle_ganhorse2zebra) by default.
+- Training logs and checkpoints are stored in `--output_dir`
+- We can use the following command to train the CycleGAN model on 2 GPUs and store the TensorBoard summary and checkpoints to `runs/`:
   ```
-  python main.py --output_dir runs/001_unet_wgangp --alogrithm unet --model unet --mixed_precision
+  CUDA_VISIBLE_DEVICES=0,1 python main.py --output_dir runs/ --epochs 200
   ``` 
-- monitor training performance using `tensorboard`
-  ```
-  tensorboard --logdir runs/001_unet_wgangp
-  ```
+- Use `--help` to see all available flags.
 
-   
+
+## 3. Result
+- Use `TensorBoard` to inspect the training summary and plots
+  ```
+  tensorboard --logdir runs/cyclegan
+  ```
+  ![](images/tensorboard.png)
