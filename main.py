@@ -162,10 +162,11 @@ class CycleGAN:
   def load_checkpoint(self, expect_partial: bool = False):
     """ load checkpoint from checkpoint_dir if exists """
     if os.path.exists(f'{os.path.join(self.checkpoint_prefix)}.index'):
-      if expect_partial:
-        self.checkpoint.read(self.checkpoint_prefix).expected_partial()
-      else:
-        self.checkpoint.read(self.checkpoint_prefix)
+      with self.strategy.scope():
+        if expect_partial:
+          self.checkpoint.read(self.checkpoint_prefix).expect_partial()
+        else:
+          self.checkpoint.read(self.checkpoint_prefix)
       print(f'\nloaded checkpoint from {self.checkpoint_prefix}\n')
 
   def reduce_mean(self, inputs):
@@ -377,6 +378,8 @@ def main(args):
   train_ds, test_ds, plot_ds = get_datasets(args, strategy=strategy)
 
   gan = CycleGAN(args, strategy=strategy)
+
+  # load last checkpoint if exists
   gan.load_checkpoint()
 
   for epoch in range(args.epochs):

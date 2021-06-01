@@ -111,6 +111,7 @@ def append_dict(dict1: dict, dict2: dict, replace: bool = False):
 
 def plot_cycle(plot_ds, gan, summary, epoch: int):
   samples = {}
+
   for x, y in plot_ds:
     fake_x, fake_y, cycle_x, cycle_y = gan.cycle_step(x, y, training=False)
     append_dict(dict1=samples,
@@ -122,11 +123,13 @@ def plot_cycle(plot_ds, gan, summary, epoch: int):
                     'cycle_x': cycle_x,
                     'cycle_y': cycle_y
                 })
+
   for key, images in samples.items():
     # scale images back to [0, 255]
     images = tf.concat(images, axis=0).numpy()
     images = ((images + 1) * 127.5).astype(np.uint8)
     samples[key] = images
+
   summary.image_cycle(
       tag=f'X_cycle',
       images=[samples['x'], samples['fake_y'], samples['cycle_x']],
