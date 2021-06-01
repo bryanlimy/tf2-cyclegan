@@ -1,5 +1,5 @@
 # CycleGAN with multi-GPUs training in TensorFlow 2
-This repository provide a concise example on how to use `tf.distribute.MirroredStrategy` with custom training loops in TensorFlow 2. We adapt the CycleGAN ([Zhu et. al. 2017](https://arxiv.org/pdf/1703.10593.pdf)) tutorials from [Keras](https://keras.io/examples/generative/cyclegan) and [TensorFlow](https://www.tensorflow.org/tutorials/generative/cyclegan) and train the model with multiple GPUs. See [medium.com/@bryanlimy/distributed-custom-training-loops-in-tensorflow-2](https://medium.com/@bryanlimy/distributed-custom-training-loops-in-tensorflow-2) for a detailed tutorial.
+This repository provide a concise example on how to use `tf.distribute.MirroredStrategy` with custom training loops in TensorFlow 2. We adapt the CycleGAN ([Zhu et. al. 2017](https://arxiv.org/pdf/1703.10593.pdf)) tutorials from [Keras](https://keras.io/examples/generative/cyclegan) and [TensorFlow](https://www.tensorflow.org/tutorials/generative/cyclegan) and train the model with multiple GPUs. See [bryanlimy.medium.com/multi-gpus-and-custom-training-loops-in-tensorflow-2-15b4b86b53bd](https://bryanlimy.medium.com/multi-gpus-and-custom-training-loops-in-tensorflow-2-15b4b86b53bd) for a detailed tutorial.
 
 |  horse → zebra → horse  |  zebra → horse → zebra  |
 | :---------------------: | :---------------------: |
