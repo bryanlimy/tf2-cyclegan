@@ -1,5 +1,9 @@
-# Distributed training with custom training loops in TensorFlow 2
-This repository provide a concise example on how to use `tf.distribute.Strategy` with custom training loops in TensorFlow 2. We adapt the CycleGAN ([Zhu et. al. 2017](https://arxiv.org/pdf/1703.10593.pdf)) tutorials from [Keras](https://keras.io/examples/generative/cyclegan) and [TensorFlow](https://www.tensorflow.org/tutorials/generative/cyclegan) and train the model with multiple GPUs. See [medium.com](https://medium.com) for a detailed tutorial.
+# Distributed custom training loops in TensorFlow 2
+This repository provide a concise example on how to use `tf.distribute.MirroredStrategy` with custom training loops in TensorFlow 2. We adapt the CycleGAN ([Zhu et. al. 2017](https://arxiv.org/pdf/1703.10593.pdf)) tutorials from [Keras](https://keras.io/examples/generative/cyclegan) and [TensorFlow](https://www.tensorflow.org/tutorials/generative/cyclegan) and train the model with multiple GPUs. See [medium.com/@bryanlimy/distributed-custom-training-loops-in-tensorflow-2](https://medium.com/@bryanlimy/distributed-custom-training-loops-in-tensorflow-2) for a detailed tutorial.
+
+horse -> zebra -> horse    |  zebra -> horse -> zebra
+:-------------------------:|:-------------------------:
+![](images/x_cycle.png)    |  ![](images/y_cycle.png)
 
 ## 1. Setup
 - create virtual environment for the project
@@ -16,17 +20,18 @@ This repository provide a concise example on how to use `tf.distribute.Strategy`
   ```
 
 ## 2. Run
-- Use `--help` to see all available flags.
-- By default, we train our model using the `horse2zebra` dataset from [TensorFlow Datasets](https://www.tensorflow.org/datasets/catalog/cycle_gan#cycle_ganhorse2zebra).
+- We use the  `horse2zebra` dataset from [TensorFlow Datasets](https://www.tensorflow.org/datasets/catalog/cycle_gan#cycle_ganhorse2zebra) by default.
 - Training logs and checkpoints are stored in `--output_dir`
-- We can use the following command to train the CycleGAN model on 2 GPUs and store the TensorBoard summary and checkpoints to `runs/cyclegan`:
+- We can use the following command to train the CycleGAN model on 2 GPUs and store the TensorBoard summary and checkpoints to `runs/`:
   ```
-  CUDA_VISIBLE_DEVICES=1,2 python main.py --output_dir runs/cyclegan --epochs 200
+  CUDA_VISIBLE_DEVICES=0,1 python main.py --output_dir runs/ --epochs 200
   ``` 
+- Use `--help` to see all available flags.
 
 
-## 3. Results
+## 3. Result
 - Use `TensorBoard` to inspect the training summary and plots
   ```
   tensorboard --logdir runs/cyclegan
   ```
+  ![](images/tensorboard.png)
